@@ -610,6 +610,7 @@ int main(int argc, char *argv[])
 {
     char text[1028],temptext[1028], str[1028];
     int tlen,mlen,move[12],numlegal,done;
+    int numMoves;
     if(argc>=3)
     {
        if(!strncasecmp("-MaxDepth",argv[argc-2], strlen("-MaxDepth")))
@@ -634,6 +635,7 @@ int main(int argc, char *argv[])
     InitGraphics(argc,argv);
 #else
       NewGame();
+      numMoves=0;
       {
      int x,y;
      /* I'll wait a bit to make sure both oponents are ready to go */
@@ -649,13 +651,11 @@ int main(int argc, char *argv[])
         int dummy;
         HandleEvents();
         if(playing) {
-            int numMoves;
             sprintf(str,"Waiting for player %d",turn+1);
             Message(str);
             HumanMoved = done = 0;
             pthread_create(&thread, NULL, timer, (void*)&done);
             pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &dummy);
-            numMoves=0;
             do {
                 HandleEvents();
                 /* Give humans all the time they want to move */

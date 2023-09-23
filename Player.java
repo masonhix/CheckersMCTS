@@ -2,7 +2,10 @@ import java.util.*;
 import java.io.*;
 
 public class Player {
-
+    static double start;
+    static double end;
+    static boolean outOfTime = false;
+    static int buffer = 50; // Through MANY trial and error tests 50ms seems to work well for an extra buffer for time constraints.
     static Random random=new Random();
 
     static void setupBoardState(State state, int player, char[][] board)
@@ -24,6 +27,22 @@ public class Player {
     }
 
     /*
+        A function that will check if my player is out of time. It uses System.currentTimeMillis() to see how long each
+        move is taking in milliseconds. It gets updated everytime a min or max loop is started. If the current time taken
+        is approaching the maximum time allowed (modified by a buffer variable) then immediately break out of the loop
+        and choose the last move with the most success. This was implemented because in my opinion
+        automatically losing by taking too long is worse than just losing normally. Even if we have to do a sub-optimal
+        move, there is still a chance to win, but if we take too long and must forfeit, it is impossible to win.
+     */
+
+    static boolean isOutOfTime(double start, double end, float SecPerMove) {
+        if ((end - start) >= (SecPerMove*1000 - buffer)) {
+            System.err.println("Closing early from time constraint");
+            outOfTime = true;
+        } else outOfTime = false;
+        return outOfTime;
+    }
+    /*
         A function that does both min and max function as well as alpha beta pruning. This is a little bit easier
         to understand in my opinion and better to keep track of alpha and beta values. This does the same thing
         as having separate min and max functions and calling each other, it just swaps which function is called
@@ -36,31 +55,38 @@ public class Player {
         itself. Basically, I might have a super good move down there, but in order to get there I need the opponent
         to make the dumbest move in existence, which it obviously would not.
 
-        On opponents turn, as soon as beta is
+        I have modified this function to also take in the SecPerMove from PlayerHelper to track time and make sure
+        it never goes over time, even if that means picking a sub-optimal move.
 
      */
-    static double minmaxAB(State state, int maxDepth, double alpha, double beta, boolean isMaxPlayer) {
+    static double minmaxAB(State state, int maxDepth, double alpha, double beta, boolean isMaxPlayer, float SecPerMove) {
         maxDepth--;
         if (isMaxPlayer) { // max loop
             if(maxDepth <= 0) return evalBoard(state);
+            end = System.currentTimeMillis();
+            if (isOutOfTime(start, end, SecPerMove)) return evalBoard(state);
             double moveVal = -(Double.MAX_VALUE);
             for (int i = 0; i < state.numLegalMoves; i++) {
                 State nextState = new State(state);
                 PerformMove(nextState, i);
-                moveVal = Math.max(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, false)); // The next player will NOT be max player
-                if (moveVal >= beta) break;
-                alpha = Math.max(alpha, moveVal); // Update alpha to either the latest moveVal reported or keep alpha
+                moveVal = Math.max(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, false, SecPerMove)); // The next player will NOT be max player
+                alpha = Math.max(alpha, moveVal);
+                if (alpha >= beta) break;
+                //alpha = Math.max(alpha, moveVal); // Update alpha to either the latest moveVal reported or keep alpha
             }
             return moveVal;
         } else { // min loop
             if(maxDepth <= 0) return 1/evalBoard(state);
+            end = System.currentTimeMillis();
+            if (isOutOfTime(start, end, SecPerMove)) return 1/evalBoard(state);
             double moveVal = Double.MAX_VALUE;
             for (int i = 0; i < state.numLegalMoves; i++) {
                 State nextState = new State(state);
                 PerformMove(nextState, i);
-                moveVal = Math.min(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, true)); // The next player WILL be max player
-                if (alpha >= moveVal) break;
-                beta = Math.min(beta, moveVal); // Update beta to either the latest moveVal reported, or keep beta
+                moveVal = Math.min(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, true, SecPerMove)); // The next player WILL be max player
+                beta = Math.min(beta, moveVal);
+                if (alpha >= beta) break;
+                //beta = Math.min(beta, moveVal); // Update beta to either the latest moveVal reported, or keep beta
             }
             return moveVal;
         }
@@ -107,18 +133,27 @@ public class Player {
      * function
      */
     /* and the PerformMove function */
-    public static void FindBestMove(int player, char[][] board, char[] bestmove) {
+
+    // Modified the function to take the SecPerMove from PlayerHelper. This way I can run my code for SecPerMove - buffer
+    // and if it would still be executing, play the best move found instead of losing by default since I ran out of time.
+    public static void FindBestMove(int player, char[][] board, char[] bestmove, float SecPerMove) {
+        end = 0; // reset end time when called
+        outOfTime = false; // reset outOfTime to false
+        start = System.currentTimeMillis(); // Start tracking the time in milliseconds
         int myBestMoveIndex;
         double bestMoveValue = -(Double.MAX_VALUE);
         State state = new State(); // , nextstate;
         setupBoardState(state, player, board);
         myBestMoveIndex = 0;
-        for (int maxDepth = 1; maxDepth < 10; maxDepth++) {
+        int maxDepth = 100;
+        for (int i = 1; i < maxDepth + 1; i++) {
+            if (outOfTime) break;
             for (int x = 0; x < state.numLegalMoves; x++) {
+                if (outOfTime) break;
                 State nextState = new State(state);
                 PerformMove(nextState, x);
                 //This will eventually hit a terminal node a return a value for this state.
-                double temp = minmaxAB(nextState, maxDepth, -(Double.MAX_VALUE), Double.MAX_VALUE, false);
+                double temp = minmaxAB(nextState, i, -(Double.MAX_VALUE), Double.MAX_VALUE, false, SecPerMove);
                 // Took me way too long to find this but since we already perform the next move above on the copy of the
                 // state it would actually be min's turn next not max.
                 if (temp > bestMoveValue) {
@@ -126,6 +161,8 @@ public class Player {
                     bestMoveValue = temp;
                 }
             }
+            System.err.println("For a depth of " + i + " the best move value found was is " + bestMoveValue + "\n");
+            System.err.println("Current time of move is " + (end-start) + "\n");
         }
         PlayerHelper.memcpy(bestmove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
     }
@@ -167,7 +204,44 @@ public class Player {
 
 
     /* An example of how to walk through a board and determine what pieces are on it*/
+    /*
+        A different evalBoard function that compares number of pieces instead of material difference. Output is
+        me/opponent as I still want to value higher numbers.
+     */
+    static double evalBoard(State state)
+    {
+        int y,x;
+        double scoreMe = 0.0;
+        double scoreOpponent = 0.0;
+        double score = 0.0;
 
+        for(y=0; y<8; y++) for(x=0; x<8; x++)
+        {
+            if(x%2 != y%2)
+            {
+                if(PlayerHelper.empty(state.board[y][x]))
+                {
+                }
+                else if(PlayerHelper.king(state.board[y][x]))
+                {
+                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 1.8;
+                    else scoreOpponent += 1.8;
+                }
+                else if(PlayerHelper.piece(state.board[y][x]))
+                {
+                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 1.1;
+                    else scoreOpponent += 1.1;
+                }
+            }
+        }
+
+        score = scoreMe/scoreOpponent;
+        if(state.player==1) score = 1/score;
+
+        return score;
+
+    }
+    /*
     static double evalBoard(State state)
     {
         int y,x;
@@ -183,8 +257,8 @@ public class Player {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) score += 1.8;
-                    else score -= 1.8;
+                    if(PlayerHelper.color(state.board[y][x])==2) score += 2.0;
+                    else score -= 2.0;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
@@ -198,6 +272,6 @@ public class Player {
 
         return score;
 
-    }
+    }*/
 
 }
