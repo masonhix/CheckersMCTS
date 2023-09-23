@@ -41,27 +41,26 @@ public class Player {
      */
     static double minmaxAB(State state, int maxDepth, double alpha, double beta, boolean isMaxPlayer) {
         maxDepth--;
-        if (isMaxPlayer) {
+        if (isMaxPlayer) { // max loop
             if(maxDepth <= 0) return evalBoard(state);
             double moveVal = -(Double.MAX_VALUE);
             for (int i = 0; i < state.numLegalMoves; i++) {
                 State nextState = new State(state);
                 PerformMove(nextState, i);
                 moveVal = Math.max(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, false)); // The next player will NOT be max player
+                if (moveVal >= beta) break;
                 alpha = Math.max(alpha, moveVal); // Update alpha to either the latest moveVal reported or keep alpha
-                if (alpha >= beta) break; // If alpha is greater than or equal to beta, we are assuming the opponent makes a dumb move and won't happen.
-                                          // in this case, break out of the loop and prune any other branches left.
             }
             return moveVal;
-        } else {
-            if(maxDepth <= 0) return -(evalBoard(state));
+        } else { // min loop
+            if(maxDepth <= 0) return 1/evalBoard(state);
             double moveVal = Double.MAX_VALUE;
             for (int i = 0; i < state.numLegalMoves; i++) {
                 State nextState = new State(state);
                 PerformMove(nextState, i);
                 moveVal = Math.min(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, true)); // The next player WILL be max player
+                if (alpha >= moveVal) break;
                 beta = Math.min(beta, moveVal); // Update beta to either the latest moveVal reported, or keep beta
-                if (alpha >= beta) break; // Check for alpha/beta breaking conditions.
             }
             return moveVal;
         }
@@ -114,23 +113,20 @@ public class Player {
         State state = new State(); // , nextstate;
         setupBoardState(state, player, board);
         myBestMoveIndex = 0;
-        int maxDepth = 5;
-        for (int x = 0; x < state.numLegalMoves; x++) {
-            State nextState = new State(state);
-            PerformMove(nextState, x);
-
-            //This will eventually hit a terminal node a return a value for this state.
-            double temp = minmaxAB(state, maxDepth, -(Double.MAX_VALUE), Double.MAX_VALUE, true);
-            if (temp > bestMoveValue) {
-                myBestMoveIndex = x;
-                bestMoveValue = temp;
+        for (int maxDepth = 1; maxDepth < 10; maxDepth++) {
+            for (int x = 0; x < state.numLegalMoves; x++) {
+                State nextState = new State(state);
+                PerformMove(nextState, x);
+                //This will eventually hit a terminal node a return a value for this state.
+                double temp = minmaxAB(nextState, maxDepth, -(Double.MAX_VALUE), Double.MAX_VALUE, false);
+                // Took me way too long to find this but since we already perform the next move above on the copy of the
+                // state it would actually be min's turn next not max.
+                if (temp > bestMoveValue) {
+                    myBestMoveIndex = x;
+                    bestMoveValue = temp;
+                }
             }
-            printBoard(nextState);
-            System.err.println("Eval of board: " + evalBoard(nextState));
-            System.err.println("Best move value: " + bestMoveValue);
         }
-
-
         PlayerHelper.memcpy(bestmove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
     }
 
@@ -168,7 +164,10 @@ public class Player {
         }
     }
 
+
+
     /* An example of how to walk through a board and determine what pieces are on it*/
+
     static double evalBoard(State state)
     {
         int y,x;
@@ -184,8 +183,8 @@ public class Player {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) score += 2.0;
-                    else score -= 2.0;
+                    if(PlayerHelper.color(state.board[y][x])==2) score += 1.8;
+                    else score -= 1.8;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
