@@ -37,7 +37,7 @@ public class Player {
 
     static boolean isOutOfTime(double start, double end, float SecPerMove) {
         if ((end - start) >= (SecPerMove*1000 - buffer)) {
-            System.err.println("Closing early from time constraint");
+            //System.err.println("Closing early from time constraint");
             outOfTime = true;
         } else outOfTime = false;
         return outOfTime;
@@ -62,9 +62,10 @@ public class Player {
     static double minmaxAB(State state, int maxDepth, double alpha, double beta, boolean isMaxPlayer, float SecPerMove) {
         maxDepth--;
         if (isMaxPlayer) { // max loop
-            if(maxDepth <= 0) return evalBoard(state);
+            if(maxDepth <= 0) return evalBoardSpecial(state);
             end = System.currentTimeMillis();
-            if (isOutOfTime(start, end, SecPerMove)) return evalBoard(state);
+            outOfTime = isOutOfTime(start, end, SecPerMove);
+            if (outOfTime) maxDepth = 0;
             double moveVal = -(Double.MAX_VALUE);
             for (int i = 0; i < state.numLegalMoves; i++) {
                 State nextState = new State(state);
@@ -74,11 +75,12 @@ public class Player {
                 if (alpha >= beta) break;
                 //alpha = Math.max(alpha, moveVal); // Update alpha to either the latest moveVal reported or keep alpha
             }
-            return moveVal;
+            return alpha; // Return alpha instead of moveVal?
         } else { // min loop
-            if(maxDepth <= 0) return 1/evalBoard(state);
+            if(maxDepth <= 0) return (1/(evalBoardSpecial(state)));
             end = System.currentTimeMillis();
-            if (isOutOfTime(start, end, SecPerMove)) return 1/evalBoard(state);
+            outOfTime = isOutOfTime(start, end, SecPerMove);
+            if (outOfTime) maxDepth = 0;
             double moveVal = Double.MAX_VALUE;
             for (int i = 0; i < state.numLegalMoves; i++) {
                 State nextState = new State(state);
@@ -88,7 +90,7 @@ public class Player {
                 if (alpha >= beta) break;
                 //beta = Math.min(beta, moveVal); // Update beta to either the latest moveVal reported, or keep beta
             }
-            return moveVal;
+            return beta; // Return beta instead of moveVal?
         }
     }
 /*
@@ -137,15 +139,19 @@ public class Player {
     // Modified the function to take the SecPerMove from PlayerHelper. This way I can run my code for SecPerMove - buffer
     // and if it would still be executing, play the best move found instead of losing by default since I ran out of time.
     public static void FindBestMove(int player, char[][] board, char[] bestmove, float SecPerMove) {
-        end = 0; // reset end time when called
         outOfTime = false; // reset outOfTime to false
         start = System.currentTimeMillis(); // Start tracking the time in milliseconds
+        end = System.currentTimeMillis();
         int myBestMoveIndex;
-        double bestMoveValue = -(Double.MAX_VALUE);
         State state = new State(); // , nextstate;
         setupBoardState(state, player, board);
         myBestMoveIndex = 0;
         int maxDepth = 100;
+        double bestMoveValue = -(Double.MAX_VALUE);
+        double[] bestMoveID = new double[maxDepth];
+        int[] bestIndexID = new int[maxDepth];
+        Arrays.fill(bestIndexID, 0);
+        Arrays.fill(bestMoveID, -(Double.MAX_VALUE));
         for (int i = 1; i < maxDepth + 1; i++) {
             if (outOfTime) break;
             for (int x = 0; x < state.numLegalMoves; x++) {
@@ -156,14 +162,30 @@ public class Player {
                 double temp = minmaxAB(nextState, i, -(Double.MAX_VALUE), Double.MAX_VALUE, false, SecPerMove);
                 // Took me way too long to find this but since we already perform the next move above on the copy of the
                 // state it would actually be min's turn next not max.
+                System.err.println("Move " + state.movelist[x] + " has a value of " + temp + "\n");
                 if (temp > bestMoveValue) {
                     myBestMoveIndex = x;
                     bestMoveValue = temp;
                 }
+                // If the move has the same value as the current best move, flip a coin to add randomness.
+                else if (temp == bestMoveValue) {
+                    if ((random.nextInt(2)) == 1) myBestMoveIndex = x;
+                }
             }
-            System.err.println("For a depth of " + i + " the best move value found was is " + bestMoveValue + "\n");
-            System.err.println("Current time of move is " + (end-start) + "\n");
+            // Keep track of the best move found at a depth and the corresponding index it was found.
+            bestMoveID[i-1] = bestMoveValue;
+            bestIndexID[i-1] = myBestMoveIndex;
+            System.err.println("For a depth of " + i + " the best move is " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
         }
+        myBestMoveIndex = 0;
+        bestMoveValue = -(Double.MAX_VALUE);
+        for(int i = 0; i < maxDepth; i++) {
+            if (bestMoveID[i] > bestMoveValue) {
+                bestMoveValue = bestMoveID[i];
+                myBestMoveIndex = bestIndexID[i];
+            }
+        }
+        System.err.println("Selecting move " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
         PlayerHelper.memcpy(bestmove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
     }
 
@@ -208,7 +230,48 @@ public class Player {
         A different evalBoard function that compares number of pieces instead of material difference. Output is
         me/opponent as I still want to value higher numbers.
      */
-    static double evalBoard(State state)
+    static boolean isMyPiece(State state, int y, int x) {
+        if(PlayerHelper.color(state.board[y][x])==2) return true;
+        else return false;
+    }
+    // Determine how many friends are nearby, which add to my score as a piece will be harder to take with friends nearby
+    static int numFriends(State state, int y, int x) {
+        int friends = 0;
+        if(y>= 1 && y<=6 && x>= 1 && x<=6) {
+            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && isMyPiece(state, y+1, x+1)) friends += 1;
+            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && isMyPiece(state, y-1, x+1)) friends += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && isMyPiece(state, y+1, x-1)) friends += 1;
+            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && isMyPiece(state, y-1, x-1)) friends += 1;
+        } else if (y == 0 && x>=1 && x<=6) {
+            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && isMyPiece(state, y+1, x+1)) friends += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && isMyPiece(state, y+1, x-1)) friends += 1;
+        } else if (y == 7 && x>=1 && x<=6) {
+            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && isMyPiece(state, y-1, x+1)) friends += 1;
+            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && isMyPiece(state, y-1, x-1)) friends += 1;
+        } else if (x == 7 && y>=1 && y<=6) {
+            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && isMyPiece(state, y-1, x-1)) friends += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && isMyPiece(state, y+1, x-1)) friends += 1;
+        } else if (x == 0 && y>=1 && y<=6) {
+            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && isMyPiece(state, y-1, x+1)) friends += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && isMyPiece(state, y+1, x+1)) friends += 1;
+        }
+        return friends;
+    }
+
+    static boolean canSafelyMoveForward(State state, int y, int x) {
+        boolean canSafelyMoveForward = false;
+        if(y>=0 && y<=5 && x>=2 && x<=5) {
+            if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
+        } else if(y>=0 && y<=5 && x<=1) {
+            if(PlayerHelper.empty(state.board[y+2][x+2])) canSafelyMoveForward = true;
+        } else if(y>=0 && y<= 5 && x>= 6) {
+            if(PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
+        }
+        return canSafelyMoveForward;
+    }
+
+
+    static double evalBoardSpecial(State state)
     {
         int y,x;
         double scoreMe = 0.0;
@@ -224,13 +287,19 @@ public class Player {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 1.8;
-                    else scoreOpponent += 1.8;
+                    if(isMyPiece(state, y, x)) scoreMe += 1.7;
+                    else scoreOpponent += 1.7;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 1.1;
-                    else scoreOpponent += 1.1;
+                    if(isMyPiece(state, y, x)) {
+                        scoreMe += 1.0; // Automatically gain points for being my piece
+                        //if(numFriends(state, y, x) >= 2) scoreMe += 0.1; // Slightly extra points for having friends nearby
+                        //if(canSafelyMoveForward(state, y, x)) scoreMe += 0.1; // Greatly value safely moving forward.
+                    }
+                    else scoreOpponent += 1.0; // Automatically gain points for being my piece
+                    //if (numFriends(state, y, x) >= 2) scoreOpponent += 0.1; // Extra points for having friends nearby
+                    //if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.1;
                 }
             }
         }
@@ -241,12 +310,13 @@ public class Player {
         return score;
 
     }
-    /*
+
     static double evalBoard(State state)
     {
         int y,x;
-        double score;
-        score=0.0;
+        double score, scoreMe, scoreOpponent;
+        scoreMe=0.0;
+        scoreOpponent = 0.0;
 
         for(y=0; y<8; y++) for(x=0; x<8; x++)
         {
@@ -257,21 +327,22 @@ public class Player {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) score += 2.0;
-                    else score -= 2.0;
+                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.0;
+                    else scoreOpponent += 2.0;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) score += 1.0;
-                    else score -= 1.0;
+                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 1.0;
+                    else scoreOpponent += 1.0;
                 }
             }
         }
 
-        if(state.player==1) score = -score;
+        score = scoreMe/scoreOpponent;
+        if(state.player==1) score = 1/score;
 
         return score;
 
-    }*/
+    }
 
 }
