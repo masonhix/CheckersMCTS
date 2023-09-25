@@ -62,7 +62,7 @@ public class Player {
     static double minmaxAB(State state, int maxDepth, double alpha, double beta, boolean isMaxPlayer, float SecPerMove) {
         maxDepth--;
         if (isMaxPlayer) { // max loop
-            if(maxDepth <= 0) return evalBoardSpecial(state);
+            if(maxDepth <= 0) return evalBoard(state);
             end = System.currentTimeMillis();
             outOfTime = isOutOfTime(start, end, SecPerMove);
             if (outOfTime) maxDepth = 0;
@@ -77,7 +77,7 @@ public class Player {
             }
             return alpha; // Return alpha instead of moveVal?
         } else { // min loop
-            if(maxDepth <= 0) return (1/(evalBoardSpecial(state)));
+            if(maxDepth <= 0) return (1/(evalBoard(state)));
             end = System.currentTimeMillis();
             outOfTime = isOutOfTime(start, end, SecPerMove);
             if (outOfTime) maxDepth = 0;
@@ -258,18 +258,76 @@ public class Player {
         return friends;
     }
 
+    static int numEnemies(State state, int y, int x) {
+        int enemies = 0;
+        if(y>= 1 && y<=6 && x>= 1 && x<=6) {
+            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && !isMyPiece(state, y+1, x+1)) enemies += 1;
+            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && !isMyPiece(state, y-1, x+1)) enemies += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && !isMyPiece(state, y+1, x-1)) enemies += 1;
+            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && !isMyPiece(state, y-1, x-1)) enemies += 1;
+        } else if (y == 0 && x>=1 && x<=6) {
+            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && !isMyPiece(state, y+1, x+1)) enemies += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && !isMyPiece(state, y+1, x-1)) enemies += 1;
+        } else if (y == 7 && x>=1 && x<=6) {
+            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && !isMyPiece(state, y-1, x+1)) enemies += 1;
+            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && !isMyPiece(state, y-1, x-1)) enemies += 1;
+        } else if (x == 7 && y>=1 && y<=6) {
+            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && !isMyPiece(state, y-1, x-1)) enemies += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && !isMyPiece(state, y+1, x-1)) enemies += 1;
+        } else if (x == 0 && y>=1 && y<=6) {
+            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && !isMyPiece(state, y-1, x+1)) enemies += 1;
+            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && !isMyPiece(state, y+1, x+1)) enemies += 1;
+        }
+        return enemies;
+    }
+
+
     static boolean canSafelyMoveForward(State state, int y, int x) {
         boolean canSafelyMoveForward = false;
         if(y>=0 && y<=5 && x>=2 && x<=5) {
-            if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
+            if(PlayerHelper.empty(state.board[y+2][x])) {
+                if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x+2) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
+            }
+            else if(!isMyPiece(state, y+2, x)) {
+                if((isMyPiece(state, y, x+2) && (isMyPiece(state, y+2, x+2) || PlayerHelper.empty(state.board[y+2][x+2])))) canSafelyMoveForward = true;
+                if((isMyPiece(state, y, x-2) && (isMyPiece(state, y+2, x-2) || PlayerHelper.empty(state.board[y+2][x-2])))) canSafelyMoveForward = true;
+                else canSafelyMoveForward = false;
+            }
         } else if(y>=0 && y<=5 && x<=1) {
-            if(PlayerHelper.empty(state.board[y+2][x+2])) canSafelyMoveForward = true;
-        } else if(y>=0 && y<= 5 && x>= 6) {
-            if(PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
+            if(PlayerHelper.empty(state.board[y+2][x])) {
+                if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
+            }
+            if(!isMyPiece(state, y+2, x)) {
+                if(isMyPiece(state, y, x+2) && (PlayerHelper.empty(state.board[y+2][x+2])) || (isMyPiece(state, y+2, x+2))) canSafelyMoveForward = true;
+                else canSafelyMoveForward = false;
+            }
+            if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
+        } else if(y>=0 && y<=5 && x>=6) {
+            if(PlayerHelper.empty(state.board[y+2][x])) {
+                if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
+            }
+            if(!isMyPiece(state, y+2, x)) {
+                if(isMyPiece(state, y, x-2) && (PlayerHelper.empty(state.board[y+2][x-2])) || (isMyPiece(state, y+2, x-2))) canSafelyMoveForward = true;
+                else canSafelyMoveForward = false;
+            }
+            if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
         }
         return canSafelyMoveForward;
     }
 
+    /*
+static boolean canSafelyMoveForward(State state, int y, int x) {
+    boolean canSafelyMoveForward = false;
+    if(y>=0 && y<=5 && x>=2 && x<=5) {
+        if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
+    } else if(y>=0 && y<=5 && x<=1) {
+        if(PlayerHelper.empty(state.board[y+2][x+2])) canSafelyMoveForward = true;
+    } else if(y>=0 && y<= 5 && x>= 6) {
+        if(PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
+    }
+    return canSafelyMoveForward;
+}
+*/
 
     static double evalBoardSpecial(State state)
     {
@@ -292,6 +350,7 @@ public class Player {
                         if(x>=2 && x<= 5 && y>=1 && y<=6) scoreMe += 0.2;
                     }
                     else scoreOpponent += 2.1;
+                    if(x>=2 && x<= 5 && y>=1 && y<=6) scoreOpponent += 0.2;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
@@ -332,8 +391,8 @@ public class Player {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.0;
-                    else scoreOpponent += 2.0;
+                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.1;
+                    else scoreOpponent += 2.1;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
