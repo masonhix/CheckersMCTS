@@ -148,8 +148,8 @@ public class Player {
         myBestMoveIndex = 0;
         int maxDepth = 100;
         double bestMoveValue = -(Double.MAX_VALUE);
-        double[] bestMoveID = new double[maxDepth];
-        int[] bestIndexID = new int[maxDepth];
+        double[] bestMoveID = new double[state.numLegalMoves];
+        int[] bestIndexID = new int[state.numLegalMoves];
         Arrays.fill(bestIndexID, 0);
         Arrays.fill(bestMoveID, -(Double.MAX_VALUE));
         for (int i = 1; i < maxDepth + 1; i++) {
@@ -162,7 +162,7 @@ public class Player {
                 double temp = minmaxAB(nextState, i, -(Double.MAX_VALUE), Double.MAX_VALUE, false, SecPerMove);
                 // Took me way too long to find this but since we already perform the next move above on the copy of the
                 // state it would actually be min's turn next not max.
-                System.err.println("Move " + state.movelist[x] + " has a value of " + temp + "\n");
+                //System.err.println("Move " + state.movelist[x] + " has a value of " + temp + "\n");
                 if (temp > bestMoveValue) {
                     myBestMoveIndex = x;
                     bestMoveValue = temp;
@@ -171,15 +171,15 @@ public class Player {
                 else if (temp == bestMoveValue) {
                     if ((random.nextInt(2)) == 1) myBestMoveIndex = x;
                 }
+                bestMoveID[x] = bestMoveValue;
+                bestIndexID[x] = myBestMoveIndex;
             }
             // Keep track of the best move found at a depth and the corresponding index it was found.
-            bestMoveID[i-1] = bestMoveValue;
-            bestIndexID[i-1] = myBestMoveIndex;
-            System.err.println("For a depth of " + i + " the best move is " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
+            //System.err.println("For a depth of " + i + " the best move is " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
         }
         myBestMoveIndex = 0;
         bestMoveValue = -(Double.MAX_VALUE);
-        for(int i = 0; i < maxDepth; i++) {
+        for(int i = 0; i < state.numLegalMoves; i++) {
             if (bestMoveID[i] > bestMoveValue) {
                 bestMoveValue = bestMoveID[i];
                 myBestMoveIndex = bestIndexID[i];
@@ -287,19 +287,24 @@ public class Player {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(isMyPiece(state, y, x)) scoreMe += 1.7;
-                    else scoreOpponent += 1.7;
+                    if(isMyPiece(state, y, x)) {
+                        scoreMe += 2.1;
+                        if(x>=2 && x<= 5 && y>=1 && y<=6) scoreMe += 0.2;
+                    }
+                    else scoreOpponent += 2.1;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
                     if(isMyPiece(state, y, x)) {
                         scoreMe += 1.0; // Automatically gain points for being my piece
-                        //if(numFriends(state, y, x) >= 2) scoreMe += 0.1; // Slightly extra points for having friends nearby
-                        //if(canSafelyMoveForward(state, y, x)) scoreMe += 0.1; // Greatly value safely moving forward.
+                        //if(numFriends(state, y, x) >= 1) scoreMe += numFriends(state, y, x)*0.1; // Slightly extra points for having friends nearby
+                        if(canSafelyMoveForward(state, y, x)) scoreMe += 0.1; // Greatly value safely moving forward.
+                        if(x>=2 && x<= 5) scoreMe += 0.1;
                     }
                     else scoreOpponent += 1.0; // Automatically gain points for being my piece
-                    //if (numFriends(state, y, x) >= 2) scoreOpponent += 0.1; // Extra points for having friends nearby
-                    //if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.1;
+                    if(x>=2 && x<= 5) scoreOpponent += 0.1;
+                    //if (numFriends(state, y, x) >= 2) scoreOpponent += numFriends(state, y, x)*0.1; // Extra points for having friends nearby
+                    if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.1;
                 }
             }
         }
