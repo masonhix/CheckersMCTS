@@ -75,7 +75,7 @@ public class Player {
                 if (alpha >= beta) break;
                 //alpha = Math.max(alpha, moveVal); // Update alpha to either the latest moveVal reported or keep alpha
             }
-            return alpha; // Return alpha instead of moveVal?
+            return moveVal; //alpha; // Return alpha instead of moveVal?
         } else { // min loop
             if(maxDepth <= 0) return (1/(evalBoard(state)));
             end = System.currentTimeMillis();
@@ -357,13 +357,13 @@ static boolean canSafelyMoveForward(State state, int y, int x) {
                     if(isMyPiece(state, y, x)) {
                         scoreMe += 1.0; // Automatically gain points for being my piece
                         //if(numFriends(state, y, x) >= 1) scoreMe += numFriends(state, y, x)*0.1; // Slightly extra points for having friends nearby
-                        if(canSafelyMoveForward(state, y, x)) scoreMe += 0.1; // Greatly value safely moving forward.
+                        if(canSafelyMoveForward(state, y, x)) scoreMe += 0.2; // Greatly value safely moving forward.
                         if(x>=2 && x<= 5) scoreMe += 0.1;
                     }
                     else scoreOpponent += 1.0; // Automatically gain points for being my piece
                     if(x>=2 && x<= 5) scoreOpponent += 0.1;
                     //if (numFriends(state, y, x) >= 2) scoreOpponent += numFriends(state, y, x)*0.1; // Extra points for having friends nearby
-                    if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.1;
+                    if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.2;
                 }
             }
         }
