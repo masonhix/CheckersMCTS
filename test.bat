@@ -1,0 +1,1 @@
+./checkers "java PlayerHelper" computer 1 >> junk.txt

@@ -75,7 +75,7 @@ public class Player {
                 if (alpha >= beta) break;
                 //alpha = Math.max(alpha, moveVal); // Update alpha to either the latest moveVal reported or keep alpha
             }
-            return moveVal; //alpha; // Return alpha instead of moveVal?
+            return alpha; // Return alpha instead of moveVal?
         } else { // min loop
             if(maxDepth <= 0) return (1/(evalBoard(state)));
             end = System.currentTimeMillis();
@@ -139,6 +139,7 @@ public class Player {
     // Modified the function to take the SecPerMove from PlayerHelper. This way I can run my code for SecPerMove - buffer
     // and if it would still be executing, play the best move found instead of losing by default since I ran out of time.
     public static void FindBestMove(int player, char[][] board, char[] bestmove, float SecPerMove) {
+        boolean killerMove = false;
         outOfTime = false; // reset outOfTime to false
         start = System.currentTimeMillis(); // Start tracking the time in milliseconds
         end = System.currentTimeMillis();
@@ -163,6 +164,13 @@ public class Player {
                 // Took me way too long to find this but since we already perform the next move above on the copy of the
                 // state it would actually be min's turn next not max.
                 //System.err.println("Move " + state.movelist[x] + " has a value of " + temp + "\n");
+
+                if (temp > 1E6) {
+                    myBestMoveIndex = x;
+                    System.err.println("Killer move found at " + state.movelist[myBestMoveIndex] +"! Ending early \n");
+                    killerMove = true;
+                    break;
+                }
                 if (temp > bestMoveValue) {
                     myBestMoveIndex = x;
                     bestMoveValue = temp;
@@ -174,15 +182,25 @@ public class Player {
                 bestMoveID[x] = bestMoveValue;
                 bestIndexID[x] = myBestMoveIndex;
             }
+            if (killerMove) break;
             // Keep track of the best move found at a depth and the corresponding index it was found.
-            //System.err.println("For a depth of " + i + " the best move is " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
+            System.err.println("For a depth of " + i + " the best move is " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
+            System.err.println("Time: " + (end-start) + "\n");
         }
-        myBestMoveIndex = 0;
-        bestMoveValue = -(Double.MAX_VALUE);
-        for(int i = 0; i < state.numLegalMoves; i++) {
-            if (bestMoveID[i] > bestMoveValue) {
-                bestMoveValue = bestMoveID[i];
-                myBestMoveIndex = bestIndexID[i];
+
+        if (!killerMove) {
+            myBestMoveIndex = 0;
+            bestMoveValue = -(Double.MAX_VALUE);
+            for (int i = 0; i < state.numLegalMoves; i++) {
+                if (bestMoveID[i] > bestMoveValue) {
+                    bestMoveValue = bestMoveID[i];
+                    myBestMoveIndex = bestIndexID[i];
+                } else if (bestMoveID[i] == bestMoveValue) {
+                    if ((random.nextInt(2)) == 1) {
+                        bestMoveValue = bestMoveID[i];
+                        myBestMoveIndex = bestIndexID[i];
+                    }
+                }
             }
         }
         System.err.println("Selecting move " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
@@ -315,6 +333,41 @@ public class Player {
         return canSafelyMoveForward;
     }
 
+    static boolean canSafelyMoveBackward(State state, int y, int x) {
+        boolean canSafelyMoveForward = false;
+        y = 7-y;
+        x = 7-x;
+        if(y>=0 && y<=5 && x>=2 && x<=5) {
+            if(PlayerHelper.empty(state.board[y+2][x])) {
+                if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x+2) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
+            }
+            else if(!isMyPiece(state, y+2, x)) {
+                if((isMyPiece(state, y, x+2) && (isMyPiece(state, y+2, x+2) || PlayerHelper.empty(state.board[y+2][x+2])))) canSafelyMoveForward = true;
+                if((isMyPiece(state, y, x-2) && (isMyPiece(state, y+2, x-2) || PlayerHelper.empty(state.board[y+2][x-2])))) canSafelyMoveForward = true;
+                else canSafelyMoveForward = false;
+            }
+        } else if(y>=0 && y<=5 && x<=1) {
+            if(PlayerHelper.empty(state.board[y+2][x])) {
+                if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
+            }
+            if(!isMyPiece(state, y+2, x)) {
+                if(isMyPiece(state, y, x+2) && (PlayerHelper.empty(state.board[y+2][x+2])) || (isMyPiece(state, y+2, x+2))) canSafelyMoveForward = true;
+                else canSafelyMoveForward = false;
+            }
+            if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
+        } else if(y>=0 && y<=5 && x>=6) {
+            if(PlayerHelper.empty(state.board[y+2][x])) {
+                if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
+            }
+            if(!isMyPiece(state, y+2, x)) {
+                if(isMyPiece(state, y, x-2) && (PlayerHelper.empty(state.board[y+2][x-2])) || (isMyPiece(state, y+2, x-2))) canSafelyMoveForward = true;
+                else canSafelyMoveForward = false;
+            }
+            if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
+        }
+        return canSafelyMoveForward;
+    }
+
     /*
 static boolean canSafelyMoveForward(State state, int y, int x) {
     boolean canSafelyMoveForward = false;
@@ -348,22 +401,30 @@ static boolean canSafelyMoveForward(State state, int y, int x) {
                     if(isMyPiece(state, y, x)) {
                         scoreMe += 2.1;
                         if(x>=2 && x<= 5 && y>=1 && y<=6) scoreMe += 0.2;
+                        if(canSafelyMoveBackward(state, y, x) && y==7) {
+                            scoreMe += 0.4;
+                        }
                     }
                     else scoreOpponent += 2.1;
                     if(x>=2 && x<= 5 && y>=1 && y<=6) scoreOpponent += 0.2;
+                    if(canSafelyMoveBackward(state, y, x) && y==7) {
+                        scoreOpponent += 0.4;
+                    }
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
                     if(isMyPiece(state, y, x)) {
                         scoreMe += 1.0; // Automatically gain points for being my piece
-                        //if(numFriends(state, y, x) >= 1) scoreMe += numFriends(state, y, x)*0.1; // Slightly extra points for having friends nearby
-                        if(canSafelyMoveForward(state, y, x)) scoreMe += 0.2; // Greatly value safely moving forward.
-                        if(x>=2 && x<= 5) scoreMe += 0.1;
+                        if(numFriends(state, y, x) >= 1) scoreMe += numFriends(state, y, x)*0.1; // Slightly extra points for having friends nearby
+                        if(canSafelyMoveForward(state, y, x)) scoreMe += 0.3; // Greatly value safely moving forward.
+                        if(x>=2 && x<= 5) scoreMe += 0.2;
+                        if(y==0) scoreMe += 0.8;
                     }
                     else scoreOpponent += 1.0; // Automatically gain points for being my piece
-                    if(x>=2 && x<= 5) scoreOpponent += 0.1;
-                    //if (numFriends(state, y, x) >= 2) scoreOpponent += numFriends(state, y, x)*0.1; // Extra points for having friends nearby
-                    if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.2;
+                    if(x>=2 && x<= 5) scoreOpponent += 0.2;
+                    if (numFriends(state, y, x) >= 2) scoreOpponent += numFriends(state, y, x)*0.1; // Extra points for having friends nearby
+                    if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.3;
+                    if(y==0) scoreOpponent += 0.8;
                 }
             }
         }
