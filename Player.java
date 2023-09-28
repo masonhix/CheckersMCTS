@@ -73,9 +73,8 @@ public class Player {
                 moveVal = Math.max(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, false, SecPerMove)); // The next player will NOT be max player
                 alpha = Math.max(alpha, moveVal);
                 if (alpha >= beta) break;
-                //alpha = Math.max(alpha, moveVal); // Update alpha to either the latest moveVal reported or keep alpha
             }
-            return alpha; // Return alpha instead of moveVal?
+            return alpha;
         } else { // min loop
             if(maxDepth <= 0) return (1/(evalBoard(state)));
             end = System.currentTimeMillis();
@@ -88,45 +87,10 @@ public class Player {
                 moveVal = Math.min(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, true, SecPerMove)); // The next player WILL be max player
                 beta = Math.min(beta, moveVal);
                 if (alpha >= beta) break;
-                //beta = Math.min(beta, moveVal); // Update beta to either the latest moveVal reported, or keep beta
             }
-            return beta; // Return beta instead of moveVal?
+            return beta;
         }
     }
-/*
-    static double min(State state, int maxDepth, double alpha, double beta) {
-        if(maxDepth <= 0) return -evalBoard(state); // Return a negative number since this goes AGAINST the max player (me).
-        maxDepth--;
-        double bestMoveValue = Double.MAX_VALUE;
-        for(int i = 0; i < state.numLegalMoves; i++) {
-            State nextState = new State(state); // makes a copy of the current state
-            PerformMove(nextState, i);
-            double temp = max(nextState, maxDepth, alpha, beta);
-            bestMoveValue = Math.min(temp, bestMoveValue);
-            beta = Math.min(beta, bestMoveValue);
-            if (beta <= alpha) break;
-        }
-        System.err.println("Alpha = " + alpha + "Beta = " + beta);
-        return bestMoveValue;
-    }
-
-    static double max(State state, int maxDepth, double alpha, double beta) {
-        if(maxDepth <= 0) return evalBoard(state);
-        maxDepth--;
-        double bestMoveValue = -(Double.MAX_VALUE);
-        for(int i = 0; i < state.numLegalMoves; i++) {
-            State nextState = new State(state); // makes a copy of the current state
-            PerformMove(nextState, i);
-            double temp = min(nextState, maxDepth, alpha, beta);
-            bestMoveValue = Math.max(temp, bestMoveValue);
-            alpha = Math.max(alpha, bestMoveValue);
-            if (beta <= alpha) break;
-        }
-        return bestMoveValue;
-    }
-*/
-
-
 
     /* Employ your favorite search to find the best move. This code is an example */
     /* of an alpha/beta search, except I have not provided the MinVal,MaxVal,EVAL */
@@ -139,7 +103,7 @@ public class Player {
     // Modified the function to take the SecPerMove from PlayerHelper. This way I can run my code for SecPerMove - buffer
     // and if it would still be executing, play the best move found instead of losing by default since I ran out of time.
     public static void FindBestMove(int player, char[][] board, char[] bestmove, float SecPerMove) {
-        boolean killerMove = false;
+        boolean killerMove = false; // Used for breaking out if we find a winning move early and don't need to search anymore.
         outOfTime = false; // reset outOfTime to false
         start = System.currentTimeMillis(); // Start tracking the time in milliseconds
         end = System.currentTimeMillis();
@@ -148,29 +112,34 @@ public class Player {
         setupBoardState(state, player, board);
         myBestMoveIndex = 0;
         int maxDepth = 100;
-        double bestMoveValue = -(Double.MAX_VALUE);
-        double[] bestMoveID = new double[state.numLegalMoves];
-        int[] bestIndexID = new int[state.numLegalMoves];
+        double bestMoveValue = -(Double.MAX_VALUE); // Start at negative infinity for the best move value
+        double[] bestMoveID = new double[state.numLegalMoves]; // Used for tracking the iterative deepening best move values
+        int[] bestIndexID = new int[state.numLegalMoves]; // Used for tracking the iterative deepening best move indexes
+        // Fill the ID arrays with junk data
         Arrays.fill(bestIndexID, 0);
         Arrays.fill(bestMoveID, -(Double.MAX_VALUE));
+        // Iterative deepening loop
         for (int i = 1; i < maxDepth + 1; i++) {
-            if (outOfTime) break;
+            if (outOfTime) break; // Jump out if i run out of time
+            // alpha beta pruning loop
             for (int x = 0; x < state.numLegalMoves; x++) {
-                if (outOfTime) break;
+                if (outOfTime) break; // Jump out if i run out of time
                 State nextState = new State(state);
                 PerformMove(nextState, x);
                 //This will eventually hit a terminal node a return a value for this state.
                 double temp = minmaxAB(nextState, i, -(Double.MAX_VALUE), Double.MAX_VALUE, false, SecPerMove);
-                // Took me way too long to find this but since we already perform the next move above on the copy of the
-                // state it would actually be min's turn next not max.
+                // Since we already perform the next move above on the copy of the state it would actually be min's turn next not max.
                 //System.err.println("Move " + state.movelist[x] + " has a value of " + temp + "\n");
 
+                // If the value is absurdly large we have found a winning move and there is no need to do more searching.
+                // At this point, jump out of the loops and pick this move.
                 if (temp > 1E6) {
                     myBestMoveIndex = x;
-                    System.err.println("Killer move found at " + state.movelist[myBestMoveIndex] +"! Ending early \n");
+                    //System.err.println("Killer move found at " + state.movelist[myBestMoveIndex] +"! Ending early \n");
                     killerMove = true;
                     break;
                 }
+                // Update the best move value to the most recently found value if and only if it was better
                 if (temp > bestMoveValue) {
                     myBestMoveIndex = x;
                     bestMoveValue = temp;
@@ -179,15 +148,18 @@ public class Player {
                 else if (temp == bestMoveValue) {
                     if ((random.nextInt(2)) == 1) myBestMoveIndex = x;
                 }
+                // Update iterative deepening arrays.
                 bestMoveID[x] = bestMoveValue;
                 bestIndexID[x] = myBestMoveIndex;
             }
+            // Break out if we found a killer move earlier.
             if (killerMove) break;
             // Keep track of the best move found at a depth and the corresponding index it was found.
-            System.err.println("For a depth of " + i + " the best move is " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
-            System.err.println("Time: " + (end-start) + "\n");
+            //System.err.println("For a depth of " + i + " the best move is " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
+            //System.err.println("Time: " + (end-start) + "\n");
         }
 
+        // If we did not find a winning move, pick the best move found at the deepest level
         if (!killerMove) {
             myBestMoveIndex = 0;
             bestMoveValue = -(Double.MAX_VALUE);
@@ -195,7 +167,7 @@ public class Player {
                 if (bestMoveID[i] > bestMoveValue) {
                     bestMoveValue = bestMoveID[i];
                     myBestMoveIndex = bestIndexID[i];
-                } else if (bestMoveID[i] == bestMoveValue) {
+                } else if (bestMoveID[i] == bestMoveValue) { // Add randomness to confuse opponent
                     if ((random.nextInt(2)) == 1) {
                         bestMoveValue = bestMoveID[i];
                         myBestMoveIndex = bestIndexID[i];
@@ -203,7 +175,7 @@ public class Player {
                 }
             }
         }
-        System.err.println("Selecting move " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
+        //System.err.println("Selecting move " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
         PlayerHelper.memcpy(bestmove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
     }
 
@@ -252,6 +224,7 @@ public class Player {
         if(PlayerHelper.color(state.board[y][x])==2) return true;
         else return false;
     }
+
     // Determine how many friends are nearby, which add to my score as a piece will be harder to take with friends nearby
     static int numFriends(State state, int y, int x) {
         int friends = 0;
@@ -401,29 +374,34 @@ static boolean canSafelyMoveForward(State state, int y, int x) {
                     if(isMyPiece(state, y, x)) {
                         scoreMe += 2.1;
                         if(x>=2 && x<= 5 && y>=1 && y<=6) scoreMe += 0.2;
+                        /*
                         if(canSafelyMoveBackward(state, y, x) && y==7) {
                             scoreMe += 0.4;
                         }
+                         */
                     }
                     else scoreOpponent += 2.1;
                     if(x>=2 && x<= 5 && y>=1 && y<=6) scoreOpponent += 0.2;
+                    /*
                     if(canSafelyMoveBackward(state, y, x) && y==7) {
                         scoreOpponent += 0.4;
                     }
+
+                     */
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
                     if(isMyPiece(state, y, x)) {
                         scoreMe += 1.0; // Automatically gain points for being my piece
-                        if(numFriends(state, y, x) >= 1) scoreMe += numFriends(state, y, x)*0.1; // Slightly extra points for having friends nearby
-                        if(canSafelyMoveForward(state, y, x)) scoreMe += 0.3; // Greatly value safely moving forward.
+                        //if(numFriends(state, y, x) >= 1) scoreMe += numFriends(state, y, x)*0.1; // Slightly extra points for having friends nearby
+                        //if(canSafelyMoveForward(state, y, x)) scoreMe += 0.3; // Greatly value safely moving forward.
                         if(x>=2 && x<= 5) scoreMe += 0.2;
                         if(y==0) scoreMe += 0.8;
                     }
                     else scoreOpponent += 1.0; // Automatically gain points for being my piece
                     if(x>=2 && x<= 5) scoreOpponent += 0.2;
-                    if (numFriends(state, y, x) >= 2) scoreOpponent += numFriends(state, y, x)*0.1; // Extra points for having friends nearby
-                    if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.3;
+                    //if (numFriends(state, y, x) >= 2) scoreOpponent += numFriends(state, y, x)*0.1; // Extra points for having friends nearby
+                    //if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.3;
                     if(y==0) scoreOpponent += 0.8;
                 }
             }
