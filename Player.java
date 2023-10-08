@@ -18,7 +18,7 @@ public class Player {
         PlayerHelper.FindLegalMoves(state);
     }
 
-
+//test
     static void PerformMove(State state, int moveIndex)
     {
         PlayerHelper.PerformMove(state.board, state.movelist[moveIndex], PlayerHelper.MoveLength(state.movelist[moveIndex]));
