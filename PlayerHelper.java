@@ -534,8 +534,9 @@ public class PlayerHelper {
         if (player1 == 1) {
             /* Find my move, update board, and write move to pipe */
 
-            Player.FindBestMove(1,board,bestmove, SecPerMove);
-  
+            //Player.FindBestMove(1,board,bestmove, SecPerMove);
+            Player.FindBestMoveMCTS(1,board,bestmove);
+
             if (bestmove[0] != 0) { /* There is a legal move */
                 mlen = MoveLength(bestmove);
                 PerformMove(board, bestmove, mlen);
@@ -558,7 +559,8 @@ public class PlayerHelper {
             /* Update the board to reflect opponents move */
             mlen = TextToMove(buf, move);
             PerformMove(board, move, mlen);
-            Player.FindBestMove(2,board,bestmove, SecPerMove);
+            //Player.FindBestMove(2,board,bestmove, SecPerMove);
+            Player.FindBestMoveMCTS(2,board,bestmove);
             if (bestmove[0] != 0) { /* There is a legal move */
                 mlen = MoveLength(bestmove);
                 PerformMove(board, bestmove, mlen);
@@ -590,9 +592,11 @@ public class PlayerHelper {
 
             /* Find my move, update board, and write move to pipe */
             if (player1 != 0)
-                Player.FindBestMove(1,board,bestmove, SecPerMove);
+                //Player.FindBestMove(1,board,bestmove, SecPerMove);
+                Player.FindBestMoveMCTS(1,board,bestmove);
             else
-                Player.FindBestMove(2,board,bestmove, SecPerMove);
+                //Player.FindBestMove(2,board,bestmove, SecPerMove);
+                Player.FindBestMoveMCTS(2,board,bestmove);
             if (bestmove[0] != 0) { /* There is a legal move */
                 mlen = MoveLength(bestmove);
                 PerformMove(board, bestmove, mlen);
