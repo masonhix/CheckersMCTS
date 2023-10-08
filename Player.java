@@ -18,7 +18,7 @@ public class Player {
         PlayerHelper.FindLegalMoves(state);
     }
 
-//test
+
     static void PerformMove(State state, int moveIndex)
     {
         PlayerHelper.PerformMove(state.board, state.movelist[moveIndex], PlayerHelper.MoveLength(state.movelist[moveIndex]));
@@ -90,6 +90,135 @@ public class Player {
             }
             return beta;
         }
+    }
+
+    // MCTS stuff
+    /*
+        need to keep track of how many times a move resulted in a win, and how many times it was played which gets propagated up
+        links from the children back to the parent for propagation
+     */
+    static class Node {
+        MyState state;
+        Node[] branches;
+        Node parent;
+        int won = 0; // num times a node won
+        int played = 0; // num times a node has been played
+
+        public boolean gameOver() {
+            //length of branches is 0
+            return branches.length == 0;
+        }
+        public boolean isLeaf() {
+            // if there are no branches meaning this state/node has not been expanded, it is a leaf. The nodes
+            // will automatically load in with no branches until expanded. During playout, do an AB pruning evaluation
+            // with a depth of 2 or 3 so its fast on a random move from the movelist to evaluate.
+            return branches[0] == null;
+        }
+        public Node(MyState state, Node parent) {
+            this.state = state;
+            this.branches = new Node[state.numLegalMoves];
+            this.parent = parent;
+        }
+
+        public double utility(Node curr, Node parent) {
+            //insert the UCB function
+            return 0;
+        }
+        public void expand(Node curr) {
+            for(int i = 0; i<curr.state.numLegalMoves; i++) {
+                MyState nextState = new MyState(curr.state);
+                PerformMove(nextState, i);
+                curr.branches[i] = new Node(nextState, curr);
+                curr.won += playout(nextState, 3, 50)>0?1:0; //playout using AB pruning. I don't know what the question mark thing is
+                curr.played++;
+            }
+            backprop(curr);
+        }
+        public void backprop(Node curr, int won, int played) {
+            if(curr == null) return;
+            curr.won+=won;
+            curr.played += played;
+            backprop(curr.parent, played-won, played);
+        }
+        public void backprop(Node curr) {
+            backprop(curr.parent, curr.played-curr.won, curr.played); // eventually stops because the root has no parent
+        }
+        public int playout(MyState state, int maxDepth, int maxMoves) {
+            int myBestMoveIndex = 0;
+            double bestMoveValue = -Double.MAX_VALUE;
+            //DOUBLE CHECK ON ALL THE PERSPECTIVES OF STUFF IT MAY BE WRONG
+            if(state.numLegalMoves==0) return 1; // game is over and this player lost so tell the other player they won
+            if(maxMoves==0) return 0; // 0 is a draw
+            shuffle(state.movelist, state.numLegalMoves);
+            for(int x = 0; x < state.numLegalMoves; x++) {
+                MyState nextState = new MyState(state);
+                PerformMove(nextState, x);
+                //double temp = alphabetapruningfunction
+                if(temp>bestMoveValue) {
+                    bestMoveValue = temp;
+                    myBestMoveIndex = x;
+                }
+            }
+            MyState nextState = new MyState(state);
+            PerformMove(nextState, myBestMoveIndex);
+            return -playout(nextState, maxDepth, maxMoves-1); // return the negative playout since its the other players turn
+        }
+        public void select(Node curr) {
+            if(curr.gameOver()) {
+                curr.played++;
+                backprop(curr.parent, 1, 1);
+                return;
+            }
+            if(curr.isLeaf()) {
+                expand(curr);
+                return;
+            }
+            double bestUtility = utility(curr.branches[0], curr); // utility() is the ubc function
+            Node selected - curr.brances[0];
+            for(int i = 1; i < curr.branches.length; i++) {
+                double tempUtility = utility(curr.branches[i], curr);
+                if(tempUtility>bestUtility) {
+                    bestUtility = tempUtility;
+                    selected = curr.branches[i];
+                }
+            }
+            select(selected);
+        }
+
+    }
+
+    //max is going to be the length of the array?
+    static void shuffle(Object[] arr, int maxi) {
+        int i, j;
+        for(i=0; i < maxi; i++) {
+            j = random.nextInt(maxi);
+            Object temp = arr[i];
+            arr[i] = temp;
+        }
+    }
+
+    public static void FindBestMoveMCTS() {
+        MyState state = new MyState();
+        setupBoardState(state, player, board);
+        shuffle(state.movelist, state.numLegalMoves);
+        printBoard(state);
+        Node root = new Node(state, null);
+        while(!isOutOfTime()) select(root);
+
+        double bestUtility = root.branches[0].played;
+        int myBestMoveIndex = 0;
+        for(int i = 1; i<root.branches.length; i++) { // pick the branch with the most number of plays
+            double tempUtility = root.branches[i].played;
+            if(tempUtility>bestUtility) {
+                bestUtility = tempUtility;
+                myBestMoveIndex = i;
+            }
+        }
+        PlayerHelper.memcpy(bestMove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
+    }
+
+    public MCTS(int player, char[][] board, char[] bestMove) {
+
     }
 
     /* Employ your favorite search to find the best move. This code is an example */
