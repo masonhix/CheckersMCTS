@@ -17,11 +17,15 @@ public class Player {
 
         public boolean gameOver() {
             //length of branches is 0
-            return branches.length == 0;
+            if(branches.length == 0) {
+                System.err.println("Game is over");
+                return true;
+            } else return false;
+            //return branches.length == 0;
         }
         public boolean isLeaf() {
-            // if there are no branches meaning this state/node has not been expanded, it is a leaf. The nodes
-            // will automatically load in with no branches until expanded. During playout, do an AB pruning evaluation
+            // if there is nothing in the branches array, it is a leaf node. The nodes
+            // will automatically load in with null in the branches until expanded. During playout, do an AB pruning evaluation
             // with a depth of 2 or 3 so it's fast on a random move from the movelist to evaluate.
             return branches[0] == null;
         }
@@ -30,15 +34,20 @@ public class Player {
             // the branches will be null. Also contained in EVERY node is a counter of wins and number of times played.
             this.state = state;
             this.branches = new Node[state.numLegalMoves];
+            Arrays.fill(this.branches, null);
             this.parent = parent;
             this.isMaxPlayer = isMaxPlayer;
         }
 
         public static double utility(Node curr, Node parent) {
-            return (double) (curr.won/curr.played)+Math.sqrt(2)*Math.sqrt(Math.log(parent.played)/(curr.played)); // The UCB function from the textbook with the exploration value C equal to the square root of 2.
+            //System.err.println("Trying utility with " + curr.played + " plays and  " + curr.won + " wins.");
+            if (curr.isMaxPlayer) return (double) (curr.won/curr.played)+(1.1*Math.sqrt(Math.log(parent.played)/(curr.played))); // The UCB function from the textbook with the exploration value C equal to the square root of 2.
+            else return (double) ((curr.played - curr.won)/curr.played)+(1.1*Math.sqrt(Math.log(parent.played)/(curr.played))); // maybe not correct? 
+            // Square root of 2 might be too exploratory?
         }
 
         public static void expand(Node curr) {
+            //System.err.println("Expanding");
             // Expand the current node and reveal the leaf nodes under it. When a node is generated we automatically assume it is a leaf node even though it is not.
             // The leaf nodes do not turn into more nodes until they are expanded. They are not expanded until we decide we need to go deeper.
             for(int i = 0; i<curr.state.numLegalMoves; i++) {
@@ -46,10 +55,12 @@ public class Player {
                 State nextState = new State(curr.state);
                 PerformMove(nextState, i);
                 curr.branches[i] = new Node(nextState, curr, !curr.isMaxPlayer); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
-                curr.won += playout(nextState, 3, 50, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
-                curr.played++; // Increment the curr.played value by one regardless of a win/loss/draw.
+                curr.branches[i].won += playout(nextState, 3, 50, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
+                curr.branches[i].played++; // Increment the curr.played value by one regardless of a win/loss/draw.
+                //System.err.println("Branch " + i + " played out with a value of " + curr.won + " and the node has been played " + curr.played + " times");
+                backprop(curr.branches[i]);
             }
-            backprop(curr); // Backpropagate the won/played values to the current nodes parent.
+            //backprop(curr); // Backpropagate the won/played values to the current nodes parent.
         }
         public static void backprop(Node curr, int won, int played) {
             if(curr == null) return; // If there is no parent then this is the root node in which case return.
@@ -63,6 +74,7 @@ public class Player {
             backprop(curr.parent, curr.played-curr.won, curr.played); // Shoot the wins/played values back up to the parent.
         }
         public static int playout(State state, int maxDepth, int maxMoves, boolean isMaxPlayer) {
+            //System.err.println("Running playout");
             int myBestMoveIndex = 0;
             double bestMoveValue = -Double.MAX_VALUE;
             //DOUBLE CHECK ON ALL THE PERSPECTIVES OF STUFF IT MAY BE WRONG
@@ -72,7 +84,7 @@ public class Player {
             for(int x = 0; x < state.numLegalMoves; x++) {
                 State nextState = new State(state);
                 PerformMove(nextState, x);
-                double temp = minmaxAB(nextState, 3, -Double.MAX_VALUE, Double.MAX_VALUE, !isMaxPlayer, PlayerHelper.SecPerMove);
+                double temp = minmaxAB(nextState, 5, -Double.MAX_VALUE, Double.MAX_VALUE, !isMaxPlayer, PlayerHelper.SecPerMove); // Use 5 depth instead of 3.
                 if(temp>bestMoveValue) {
                     bestMoveValue = temp;
                     myBestMoveIndex = x;
@@ -215,9 +227,28 @@ public class Player {
         setupBoardState(state, player, board);
         shuffle(state.movelist, state.numLegalMoves);
         printBoard(state);
-        Node root = new Node(state, null, true);
+        Node root = new Node(state, null, true); // The root node. It has no parent and contains the state of the board from when the FindBestMoveMCTS function was called. This is NOT always the fresh board.
+        //System.err.println("Expanding root...");
+        //Node.expand(root);
+        //System.err.println("Expanded root node. It has " + root.won + " wins and " + root.played + " plays.");
         start = System.currentTimeMillis();
-        while(!isOutOfTime(start, end, PlayerHelper.SecPerMove)) Node.select(root);
+        end = System.currentTimeMillis();
+        while(!isOutOfTime(start, end, PlayerHelper.SecPerMove)){
+            end = System.currentTimeMillis();
+            Node.select(root);
+            //System.err.println("Root has been played " + root.played + " times with " + root.won + " wins.");
+            for(int i = 0; i < root.branches.length; i++) {
+                System.err.println("Branch " + i + " of root was played " + root.branches[i].played + " times and won " + (root.branches[i].played-root.branches[i].won) + " times.");
+            }
+            // I would expect this message to constantly update with more and more games played and more and more wins as the game goes on.
+        }
+        System.err.println("Root was played " + root.played + " times and won " + root.won + " times.");
+        /*
+        for(int i = 0; i < root.branches.length; i++) {
+            System.err.println("Branch " + i + " of root was played " + root.branches[i].played + " times and won " + (root.branches[i].played-root.branches[i].won) + " times.");
+        }
+
+         */
 
         double bestUtility = root.branches[0].played;
         int myBestMoveIndex = 0;
@@ -228,6 +259,7 @@ public class Player {
                 myBestMoveIndex = i;
             }
         }
+        System.err.println("The best move found was " + myBestMoveIndex + " with a utility of " + bestUtility);
         PlayerHelper.memcpy(bestMove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
     }
 
@@ -569,8 +601,8 @@ static boolean canSafelyMoveForward(State state, int y, int x) {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.1;
-                    else scoreOpponent += 2.1;
+                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.0;
+                    else scoreOpponent += 2.0;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
