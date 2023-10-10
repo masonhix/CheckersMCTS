@@ -41,8 +41,26 @@ public class Player {
 
         public static double utility(Node curr, Node parent) {
             //System.err.println("Trying utility with " + curr.played + " plays and  " + curr.won + " wins.");
-            if (curr.isMaxPlayer) return (double) (curr.won/curr.played)+(1.1*Math.sqrt(Math.log(parent.played)/(curr.played))); // The UCB function from the textbook with the exploration value C equal to the square root of 2.
-            else return (double) ((curr.played - curr.won)/curr.played)+(1.1*Math.sqrt(Math.log(parent.played)/(curr.played))); // maybe not correct? 
+            if (curr.played < 1) return 500;
+            else if(curr.isMaxPlayer) return (double) (curr.won/curr.played)+(0.35*Math.sqrt(Math.log(parent.played)/(curr.played)));
+            else return (double) (curr.played-curr.won/curr.played)+(0.35*Math.sqrt(Math.log(parent.played)/(curr.played)));
+            //UCB = average reward + c*sqrt(ln(t)/Nt(a))
+            // The average reward is the number of wins compared to the number of times played, and will be between 0 and 1 inclusive
+            // C is the exploration constant which determines how much value exploratory moves should have. A value of 0 will only consider the immediate average reward, and a large value will overvalue exploratory moves
+            // t is the timestep, which in this case is how many times the parent was played.
+            // Nt(a) is the number of times this action was taken, which is the number of times the current node was played
+            /*
+                What does this formula mean?
+                    The square root pretty much just normalizes the values and can frankly be ignored. The important pieces is ln(t)/Nt(a). If the Nt(a) is low, meaning it either hasn't been played or has only been played a couple times
+                    compared to the parent, ln(t)/Nt(a) will grow larger since it is in the denominator. Combined with the exploration constant c, it will overvalue this action which entices it to explore assuming a moderate value of c.
+                    As the parent gets played more, ln(t) grows larger *up to a limit* due to the natural log term. As the parent is played more, the Nt(a) will eventually also grow until this eventually converges to 0. It does not
+                    converge to 1 because ln(t) will only grow larger to a point, and when the Nt(a) >> ln(t) it will eventually be a very small number.
+
+                    So ln(t)/Nt(a) has a maximum value of ~2.8ish (strangely approximately 2*sqrt(2)). To try and avoid over-exploring, I only want the value of the exploratory term to be at most the same value as the maximum average reward
+                    so c will be set to 1/(2*sqrt(2)) or approximately 0.35.
+             */
+            //if (curr.isMaxPlayer) return (double) (curr.won/curr.played)+(0*Math.sqrt(Math.log(parent.played)/(curr.played))); // The UCB function from the textbook with the exploration value C equal to the square root of 2.
+            //else return (double) ((curr.played - curr.won)/curr.played)+(0*Math.sqrt(Math.log(parent.played)/(curr.played))); // maybe not correct?
             // Square root of 2 might be too exploratory?
         }
 
@@ -55,9 +73,13 @@ public class Player {
                 State nextState = new State(curr.state);
                 PerformMove(nextState, i);
                 curr.branches[i] = new Node(nextState, curr, !curr.isMaxPlayer); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
-                curr.branches[i].won += playout(nextState, 3, 50, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
+                //curr.played++;
+                int score = playout(nextState, 5, 80, curr.isMaxPlayer);
+                if (score > 0) curr.branches[i].won++;
+                else if (score == 0) curr.branches[i].won += 0.5;
+                //curr.won += playout(nextState, 5, 80, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
                 curr.branches[i].played++; // Increment the curr.played value by one regardless of a win/loss/draw.
-                //System.err.println("Branch " + i + " played out with a value of " + curr.won + " and the node has been played " + curr.played + " times");
+                //System.err.println("Branch " + i + " won " + curr.branches[i].won + " times and was played " + curr.branches[i].played + " times");
                 backprop(curr.branches[i]);
             }
             //backprop(curr); // Backpropagate the won/played values to the current nodes parent.
@@ -237,19 +259,12 @@ public class Player {
             end = System.currentTimeMillis();
             Node.select(root);
             //System.err.println("Root has been played " + root.played + " times with " + root.won + " wins.");
-            for(int i = 0; i < root.branches.length; i++) {
-                System.err.println("Branch " + i + " of root was played " + root.branches[i].played + " times and won " + (root.branches[i].played-root.branches[i].won) + " times.");
-            }
             // I would expect this message to constantly update with more and more games played and more and more wins as the game goes on.
         }
         System.err.println("Root was played " + root.played + " times and won " + root.won + " times.");
-        /*
         for(int i = 0; i < root.branches.length; i++) {
             System.err.println("Branch " + i + " of root was played " + root.branches[i].played + " times and won " + (root.branches[i].played-root.branches[i].won) + " times.");
         }
-
-         */
-
         double bestUtility = root.branches[0].played;
         int myBestMoveIndex = 0;
         for(int i = 1; i<root.branches.length; i++) { // pick the branch with the most number of plays
