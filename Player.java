@@ -39,7 +39,7 @@ public class Player {
         public static double utility(Node curr, Node parent) {
             //System.err.println("Trying utility with " + curr.played + " plays and  " + curr.won + " wins.");
             if (curr.played < 1) return 500;
-            else  return ((curr.played-curr.won)/curr.played)+1.0*Math.sqrt(Math.log(parent.played)/(curr.played));
+            else  return ((curr.played-curr.won)/curr.played)+0.707*Math.sqrt(Math.log(parent.played)/(curr.played));
 
             //UCB = average reward + c*sqrt(ln(t)/Nt(a))
             // The average reward is the number of wins compared to the number of times played, and will be between 0 and 1 inclusive
@@ -272,7 +272,7 @@ public class Player {
                 bestUtility = tempUtility;
                 myBestMoveIndex = i;
             } else if (tempUtility == bestUtility) {
-                if ((tempUtility - root.branches[i].won) > (bestUtility - root.branches[myBestMoveIndex].won)) {
+                if (root.branches[i].played > root.branches[myBestMoveIndex].played) {
                     bestUtility = tempUtility;
                     myBestMoveIndex = i;
                 }
