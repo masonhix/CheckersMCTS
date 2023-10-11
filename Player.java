@@ -11,14 +11,12 @@ public class Player {
         State state;
         Node[] branches;
         Node parent;
-        int won = 0; // num times a node won
+        double won = 0; // num times a node won
         int played = 0; // num times a node has been played
-        boolean isMaxPlayer; // If the node is the maximizing player or not. Ideally this is just set to true one time when the root node is created and from there each branch flip flops.
-
         public boolean gameOver() {
             //length of branches is 0
             if(branches.length == 0) {
-                System.err.println("Game is over");
+                //System.err.println("Game is over");
                 return true;
             } else return false;
             //return branches.length == 0;
@@ -27,23 +25,22 @@ public class Player {
             // if there is nothing in the branches array, it is a leaf node. The nodes
             // will automatically load in with null in the branches until expanded. During playout, do an AB pruning evaluation
             // with a depth of 2 or 3 so it's fast on a random move from the movelist to evaluate.
-            return branches[0] == null;
+            return (branches[0] == null);
         }
-        public Node(State state, Node parent, boolean isMaxPlayer) {
+        public Node(State state, Node parent) {
             // Generate a new node which contains a state of the board, a parent node, and branches. If this is a leaf node
             // the branches will be null. Also contained in EVERY node is a counter of wins and number of times played.
             this.state = state;
             this.branches = new Node[state.numLegalMoves];
-            Arrays.fill(this.branches, null);
+            //Arrays.fill(this.branches, null);
             this.parent = parent;
-            this.isMaxPlayer = isMaxPlayer;
         }
 
         public static double utility(Node curr, Node parent) {
             //System.err.println("Trying utility with " + curr.played + " plays and  " + curr.won + " wins.");
             if (curr.played < 1) return 500;
-            else if(curr.isMaxPlayer) return (double) (curr.won/curr.played)+(0.35*Math.sqrt(Math.log(parent.played)/(curr.played)));
-            else return (double) (curr.played-curr.won/curr.played)+(0.35*Math.sqrt(Math.log(parent.played)/(curr.played)));
+            else  return ((curr.played-curr.won)/curr.played)+1.0*Math.sqrt(Math.log(parent.played)/(curr.played));
+
             //UCB = average reward + c*sqrt(ln(t)/Nt(a))
             // The average reward is the number of wins compared to the number of times played, and will be between 0 and 1 inclusive
             // C is the exploration constant which determines how much value exploratory moves should have. A value of 0 will only consider the immediate average reward, and a large value will overvalue exploratory moves
@@ -72,21 +69,21 @@ public class Player {
                 // A new LEAF NODE for each legal move present in the current node, and the parent of each of these nodes is the current node.
                 State nextState = new State(curr.state);
                 PerformMove(nextState, i);
-                curr.branches[i] = new Node(nextState, curr, !curr.isMaxPlayer); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
+                curr.branches[i] = new Node(nextState, curr); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
                 //curr.played++;
-                int score = playout(nextState, 5, 80, curr.isMaxPlayer);
-                if (score > 0) curr.branches[i].won++;
-                else if (score == 0) curr.branches[i].won += 0.5;
+                int score = playout(nextState, 30);
+                if (score > 0) curr.won += 1;
+                else if (score == 0) curr.won += 0.5;
                 //curr.won += playout(nextState, 5, 80, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
-                curr.branches[i].played++; // Increment the curr.played value by one regardless of a win/loss/draw.
+                curr.played += 1; // Increment the curr.played value by one regardless of a win/loss/draw.
                 //System.err.println("Branch " + i + " won " + curr.branches[i].won + " times and was played " + curr.branches[i].played + " times");
-                backprop(curr.branches[i]);
+                //backprop(curr.branches[i]);
             }
-            //backprop(curr); // Backpropagate the won/played values to the current nodes parent.
+            backprop(curr); // Backpropagate the won/played values to the current nodes parent.
         }
-        public static void backprop(Node curr, int won, int played) {
+        public static void backprop(Node curr, double won, int played) {
             if(curr == null) return; // If there is no parent then this is the root node in which case return.
-            curr.won+=won;
+            curr.won += won;
             curr.played += played;
             backprop(curr.parent, played-won, played); // Recursive call to update the parent. Same formula as seen in the other backprop function where the parent wins is the child losses, or (played-wins).
         }
@@ -95,7 +92,7 @@ public class Player {
             // the wins for the parent is actually the losses for the current. In other words, parent wins = child.plays - child.wins
             backprop(curr.parent, curr.played-curr.won, curr.played); // Shoot the wins/played values back up to the parent.
         }
-        public static int playout(State state, int maxDepth, int maxMoves, boolean isMaxPlayer) {
+        public static int playout(State state, int maxMoves) {
             //System.err.println("Running playout");
             int myBestMoveIndex = 0;
             double bestMoveValue = -Double.MAX_VALUE;
@@ -106,7 +103,7 @@ public class Player {
             for(int x = 0; x < state.numLegalMoves; x++) {
                 State nextState = new State(state);
                 PerformMove(nextState, x);
-                double temp = minmaxAB(nextState, 5, -Double.MAX_VALUE, Double.MAX_VALUE, !isMaxPlayer, PlayerHelper.SecPerMove); // Use 5 depth instead of 3.
+                double temp = minmaxAB(nextState, 3, -Double.MAX_VALUE, Double.MAX_VALUE, false, PlayerHelper.SecPerMove); // Use 5 depth instead of 3.
                 if(temp>bestMoveValue) {
                     bestMoveValue = temp;
                     myBestMoveIndex = x;
@@ -114,7 +111,7 @@ public class Player {
             }
             State nextState = new State(state);
             PerformMove(nextState, myBestMoveIndex);
-            return -playout(nextState, maxDepth, maxMoves-1, !isMaxPlayer); // return the negative playout since it is the other players turn
+            return -playout(nextState, maxMoves-1); // return the negative playout since it is the other players turn
         }
 
         public static void select(Node curr) {
@@ -239,17 +236,17 @@ public class Player {
         for(i=0; i < maxi; i++) {
             j = random.nextInt(maxi);
             Object temp = arr[j];
+            arr[j] = arr[i];
             arr[i] = temp;
         }
     }
-
 
     public static void FindBestMoveMCTS(int player, char[][] board, char[] bestMove) {
         State state = new State();
         setupBoardState(state, player, board);
         shuffle(state.movelist, state.numLegalMoves);
         printBoard(state);
-        Node root = new Node(state, null, true); // The root node. It has no parent and contains the state of the board from when the FindBestMoveMCTS function was called. This is NOT always the fresh board.
+        Node root = new Node(state, null); // The root node. It has no parent and contains the state of the board from when the FindBestMoveMCTS function was called. This is NOT always the fresh board.
         //System.err.println("Expanding root...");
         //Node.expand(root);
         //System.err.println("Expanded root node. It has " + root.won + " wins and " + root.played + " plays.");
@@ -265,13 +262,20 @@ public class Player {
         for(int i = 0; i < root.branches.length; i++) {
             System.err.println("Branch " + i + " of root was played " + root.branches[i].played + " times and won " + (root.branches[i].played-root.branches[i].won) + " times.");
         }
-        double bestUtility = root.branches[0].played;
+        double bestUtility = (root.branches[0].played-root.branches[0].won)/root.branches[0].played;
+        //double bestUtility = root.branches[0].played;
         int myBestMoveIndex = 0;
         for(int i = 1; i<root.branches.length; i++) { // pick the branch with the most number of plays
-            double tempUtility = root.branches[i].played;
+            double tempUtility = (root.branches[i].played-root.branches[i].won)/root.branches[i].played;
+            //double tempUtility = root.branches[i].played;
             if(tempUtility>bestUtility) {
                 bestUtility = tempUtility;
                 myBestMoveIndex = i;
+            } else if (tempUtility == bestUtility) {
+                if ((tempUtility - root.branches[i].won) > (bestUtility - root.branches[myBestMoveIndex].won)) {
+                    bestUtility = tempUtility;
+                    myBestMoveIndex = i;
+                }
             }
         }
         System.err.println("The best move found was " + myBestMoveIndex + " with a utility of " + bestUtility);
@@ -616,8 +620,8 @@ static boolean canSafelyMoveForward(State state, int y, int x) {
                 }
                 else if(PlayerHelper.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.0;
-                    else scoreOpponent += 2.0;
+                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.1;
+                    else scoreOpponent += 2.1;
                 }
                 else if(PlayerHelper.piece(state.board[y][x]))
                 {
