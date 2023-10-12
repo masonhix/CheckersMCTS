@@ -39,7 +39,7 @@ public class Player {
         public static double utility(Node curr, Node parent) {
             //System.err.println("Trying utility with " + curr.played + " plays and  " + curr.won + " wins.");
             if (curr.played < 1) return 500;
-            else  return ((curr.played-curr.won)/curr.played)+0.707*Math.sqrt(Math.log(parent.played)/(curr.played));
+            else  return ((curr.played-curr.won)/curr.played)+1.4*Math.sqrt(Math.log(parent.played)/(curr.played));
 
             //UCB = average reward + c*sqrt(ln(t)/Nt(a))
             // The average reward is the number of wins compared to the number of times played, and will be between 0 and 1 inclusive
@@ -72,14 +72,14 @@ public class Player {
                 curr.branches[i] = new Node(nextState, curr); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
                 //curr.played++;
                 int score = playout(nextState, 30);
-                if (score > 0) curr.won += 1;
-                else if (score == 0) curr.won += 0.5;
+                if (score > 0) curr.branches[i].won += 1;
+                else if (score == 0) curr.branches[i].won += 0.5;
                 //curr.won += playout(nextState, 5, 80, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
-                curr.played += 1; // Increment the curr.played value by one regardless of a win/loss/draw.
+                curr.branches[i].played += 1; // Increment the curr.played value by one regardless of a win/loss/draw.
                 //System.err.println("Branch " + i + " won " + curr.branches[i].won + " times and was played " + curr.branches[i].played + " times");
-                //backprop(curr.branches[i]);
+                backprop(curr.branches[i]);
             }
-            backprop(curr); // Backpropagate the won/played values to the current nodes parent.
+            //backprop(curr); // Backpropagate the won/played values to the current nodes parent.
         }
         public static void backprop(Node curr, double won, int played) {
             if(curr == null) return; // If there is no parent then this is the root node in which case return.
@@ -92,8 +92,8 @@ public class Player {
             // the wins for the parent is actually the losses for the current. In other words, parent wins = child.plays - child.wins
             backprop(curr.parent, curr.played-curr.won, curr.played); // Shoot the wins/played values back up to the parent.
         }
-        public static int playout(State state, int maxMoves) {
-            //System.err.println("Running playout");
+
+        public static int playout1(State state, int maxMoves) {
             int myBestMoveIndex = 0;
             double bestMoveValue = -Double.MAX_VALUE;
             //DOUBLE CHECK ON ALL THE PERSPECTIVES OF STUFF IT MAY BE WRONG
@@ -111,7 +111,38 @@ public class Player {
             }
             State nextState = new State(state);
             PerformMove(nextState, myBestMoveIndex);
-            return -playout(nextState, maxMoves-1); // return the negative playout since it is the other players turn
+            return -playout1(nextState, maxMoves-1); // return the negative playout since it is the other players turn
+        }
+        public static int playout(State myState, int maxMoves) {
+            // Playout method without using recursion. It is impossible to try to compare the value this returns to the recurisve playout method because it shuffles the movelist. Even comparing the recursive function results to itself shows differences.
+            // It should still play just as well as before though.
+            boolean isMe = false;   // dummy boolean to track whether the state being evaluated is me or the opponent. This is initialized to false since the move is performed before the playout in expand, so I know it is a child nodes (opponents) turn.
+            State state = new State(myState); // make a copy of the state so I don't mess up the original.
+            // Just about the only thing I need to do this without recursion is a while loop and a way to track who's turn it is to see if i am returning a positive or a negative 1.
+            while(maxMoves > 0) {
+                int myBestMoveIndex = 0;
+                double bestMoveValue = -Double.MAX_VALUE;
+                if(state.numLegalMoves==0) {
+                    if (!isMe) return -1;    // if it would be my turn and i lose, return a -1 to show that i lost
+                    else return 1;          // if it would be my opponents turn and they lose, return a 1 to show that i won
+                }
+                shuffle(state.movelist, state.numLegalMoves);
+                for (int x = 0; x < state.numLegalMoves; x++) {
+                    State nextState = new State(state);
+                    PerformMove(nextState, x);
+                    // the false indicates whether this player is the max player. Since perform move is done twice (one here and one later), this is always false.
+                    double temp = minmaxAB(nextState, 3, -Double.MAX_VALUE, Double.MAX_VALUE, false, PlayerHelper.SecPerMove);
+                    if (temp > bestMoveValue) {
+                        bestMoveValue = temp;
+                        myBestMoveIndex = x;
+                    }
+                }
+                // Perform the move on the copy of our state and redo everything.
+                PerformMove(state, myBestMoveIndex);
+                isMe = !isMe; // flip flop isMe.
+                maxMoves--;
+            }
+            return 0; // If i never got to a point where the number of legal moves was 0, then it must be a tie.
         }
 
         public static void select(Node curr) {
