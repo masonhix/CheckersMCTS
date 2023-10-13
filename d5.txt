@@ -1,0 +1,507 @@
+No graphics
+waiting
+Waiting for player 1
+Move: 10-15
+
+#a#a#a#a
+a#a#a#a#
+#a# #a#a
+ # #a# #
+# # # # 
+b#b#b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 21-17
+#a#a#a#a
+a#a#a#a#
+#a# #a#a
+ # #a# #
+#b# # # 
+ #b#b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 11-16
+
+#a#a#a#a
+a#a#a#a#
+#a# # #a
+ # #a#a#
+#b# # # 
+ #b#b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 17-13
+#a#a#a#a
+a#a#a#a#
+#a# # #a
+b# #a#a#
+# # # # 
+ #b#b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 16-20
+
+#a#a#a#a
+a#a#a#a#
+#a# # #a
+b# #a# #
+# # # #a
+ #b#b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 22-17
+#a#a#a#a
+a#a#a#a#
+#a# # #a
+b# #a# #
+#b# # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 6-10
+
+#a#a#a#a
+a# #a#a#
+#a#a# #a
+b# #a# #
+#b# # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 13-6
+#a#a#a#a
+a#b#a#a#
+# #a# #a
+ # #a# #
+#b# # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 2-9
+
+#a# #a#a
+a# #a#a#
+#a#a# #a
+ # #a# #
+#b# # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 17-13
+#a# #a#a
+a# #a#a#
+#a#a# #a
+b# #a# #
+# # # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 12-16
+
+#a# #a#a
+a# #a#a#
+#a#a# # 
+b# #a#a#
+# # # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 13-6
+#a# #a#a
+a#b#a#a#
+# #a# # 
+ # #a#a#
+# # # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 10-14
+
+#a# #a#a
+a#b#a#a#
+# # # # 
+ #a#a#a#
+# # # #a
+ # #b#b#
+#b#b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 25-21
+#a# #a#a
+a#b#a#a#
+# # # # 
+ #a#a#a#
+# # # #a
+b# #b#b#
+# #b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 1-10
+
+# # #a#a
+a# #a#a#
+# #a# # 
+ #a#a#a#
+# # # #a
+b# #b#b#
+# #b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 23-19
+# # #a#a
+a# #a#a#
+# #a# # 
+ #a#a#a#
+# # #b#a
+b# # #b#
+# #b#b#b
+b#b#b#b#
+Waiting for player 1
+Move: 16-23
+
+# # #a#a
+a# #a#a#
+# #a# # 
+ #a#a# #
+# # # #a
+b# #a#b#
+# #b#b#b
+b#b#b#b#
+Waiting for player 2
+Move: 27-18-11-2
+# #B#a#a
+a# # #a#
+# #a# # 
+ #a# # #
+# # # #a
+b# # #b#
+# #b# #b
+b#b#b#b#
+Waiting for player 1
+Move: 20-27
+
+# #B#a#a
+a# # #a#
+# #a# # 
+ #a# # #
+# # # # 
+b# # # #
+# #b#a#b
+b#b#b#b#
+Waiting for player 2
+Move: 31-24
+# #B#a#a
+a# # #a#
+# #a# # 
+ #a# # #
+# # # # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 8-12
+
+# #B#a#a
+a# # # #
+# #a# #a
+ #a# # #
+# # # # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 2-6
+# # #a#a
+a#B# # #
+# #a# #a
+ #a# # #
+# # # # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 3-7
+
+# # # #a
+a#B#a# #
+# #a# #a
+ #a# # #
+# # # # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 6-15
+# # # #a
+a# #a# #
+# # # #a
+ #a#B# #
+# # # # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 7-10
+
+# # # #a
+a# # # #
+# #a# #a
+ #a#B# #
+# # # # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 15-6
+# # # #a
+a#B# # #
+# # # #a
+ #a# # #
+# # # # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 14-18
+
+# # # #a
+a#B# # #
+# # # #a
+ # # # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 6-10
+# # # #a
+a# # # #
+# #B# #a
+ # # # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 4-8
+
+# # # # 
+a# # #a#
+# #B# #a
+ # # # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 10-14
+# # # # 
+a# # #a#
+# # # #a
+ #B# # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 5-9
+
+# # # # 
+ # # #a#
+#a# # #a
+ #B# # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 14-5
+# # # # 
+B# # #a#
+# # # #a
+ # # # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 8-11
+
+# # # # 
+B# # # #
+# # #a#a
+ # # # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 5-9
+# # # # 
+ # # # #
+#B# #a#a
+ # # # #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 11-15
+
+# # # # 
+ # # # #
+#B# # #a
+ # #a# #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 9-5
+# # # # 
+B# # # #
+# # # #a
+ # #a# #
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 12-16
+
+# # # # 
+B# # # #
+# # # # 
+ # #a#a#
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 5-1
+#B# # # 
+ # # # #
+# # # # 
+ # #a#a#
+# #a# # 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 1
+Move: 16-19
+
+#B# # # 
+ # # # #
+# # # # 
+ # #a# #
+# #a#a# 
+b# # #b#
+# #b# #b
+b#b# #b#
+Waiting for player 2
+Move: 32-27
+#B# # # 
+ # # # #
+# # # # 
+ # #a# #
+# #a#a# 
+b# # #b#
+# #b#b#b
+b#b# # #
+Waiting for player 1
+Move: 18-22
+
+#B# # # 
+ # # # #
+# # # # 
+ # #a# #
+# # #a# 
+b#a# #b#
+# #b#b#b
+b#b# # #
+Waiting for player 2
+Move: 26-17
+#B# # # 
+ # # # #
+# # # # 
+ # #a# #
+#b# #a# 
+b# # #b#
+# # #b#b
+b#b# # #
+Waiting for player 1
+Move: 15-18
+
+#B# # # 
+ # # # #
+# # # # 
+ # # # #
+#b#a#a# 
+b# # #b#
+# # #b#b
+b#b# # #
+Waiting for player 2
+Move: 24-15
+#B# # # 
+ # # # #
+# # # # 
+ # #b# #
+#b#a# # 
+b# # # #
+# # #b#b
+b#b# # #
+Waiting for player 1
+Move: 18-22
+
+#B# # # 
+ # # # #
+# # # # 
+ # #b# #
+#b# # # 
+b#a# # #
+# # #b#b
+b#b# # #
+Waiting for player 2
+Move: 1-5
+# # # # 
+B# # # #
+# # # # 
+ # #b# #
+#b# # # 
+b#a# # #
+# # #b#b
+b#b# # #
+Waiting for player 1
+Move: 22-25
+
+# # # # 
+B# # # #
+# # # # 
+ # #b# #
+#b# # # 
+b# # # #
+#a# #b#b
+b#b# # #
+Waiting for player 2
+Move: 29-22
+# # # # 
+B# # # #
+# # # # 
+ # #b# #
+#b# # # 
+b#b# # #
+# # #b#b
+ #b# # #
+Player 1 has lost the game.
