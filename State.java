@@ -31,7 +31,7 @@ public class State {
 
     public State(State state)
     {
-        PlayerHelper.memcpy(this.board,state.board);
+        PlayerHelperMason.memcpy(this.board,state.board);
         this.player=state.player;
 
         for(int i=0;i<movelist.length;i++)

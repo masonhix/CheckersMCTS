@@ -1,7 +1,6 @@
 import java.util.*;
-import java.io.*;
 
-public class Player {
+public class PlayerMason {
     static double start;
     static double end;
     static boolean outOfTime = false;
@@ -77,9 +76,9 @@ public class Player {
                 PerformMove(nextState, i);
                 curr.branches[i] = new Node(nextState, curr); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
                 //curr.played++;
-                int score = playout(nextState, 30, 3);
-                //if (nextState.numLegalMoves >= 4) score = playout(nextState, 30, 3);
-                //else score = playout(nextState, 30, 5);
+                int score = 0; //playout(nextState, 30, 3);
+                if (nextState.numLegalMoves >= 4) score = playout(nextState, 30, 4);
+                else score = playout(nextState, 30, 2);
                 if (score > 0) curr.branches[i].won += 1;
                 else if (score == 0) curr.branches[i].won += 0.5;
                 //curr.won += playout(nextState, 5, 80, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
@@ -90,10 +89,21 @@ public class Player {
             //backprop(curr); // Backpropagate the won/played values to the current nodes parent.
         }
         public static void backprop(Node curr, double won, int played) {
+            /*
             if(curr == null) return; // If there is no parent then this is the root node in which case return.
             curr.won += won;
             curr.played += played;
             backprop(curr.parent, played-won, played); // Recursive call to update the parent. Same formula as seen in the other backprop function where the parent wins is the child losses, or (played-wins).
+
+             */
+            // Do this without recursion to try and make things faster.
+            while(curr.parent != null) {
+                curr.won += won;
+                curr.played += played;
+                curr = curr.parent;
+                won = curr.played-curr.won;
+                played = curr.played;
+            }
         }
         public static void backprop(Node curr) {
             // Backpropagate the values of won/played of the current node to the parent node. The played value gets propagated regardless, but since the parent node will actually be the opposite player
@@ -119,7 +129,7 @@ public class Player {
                     State nextState = new State(state);
                     PerformMove(nextState, x);
                     // the false indicates whether this player is the max player. Since perform move is done twice (one here and one later), this is always false.
-                    double temp = minmaxAB(nextState, maxDepth, -Double.MAX_VALUE, Double.MAX_VALUE, false, PlayerHelper.SecPerMove);
+                    double temp = minmaxAB(nextState, maxDepth, -Double.MAX_VALUE, Double.MAX_VALUE, false, PlayerHelperMason.SecPerMove);
                     if (temp > bestMoveValue) {
                         bestMoveValue = temp;
                         myBestMoveIndex = x;
@@ -134,6 +144,7 @@ public class Player {
         }
 
         public static void select(Node curr) {
+            /*
             if(curr.gameOver()) { // if the game is over, meaning there are NO branches (no legal moves) then the game is over for the current node. Update the played value and propagate it up the tree.
                 curr.played++;
                 backprop(curr.parent, 1, 1);
@@ -154,6 +165,27 @@ public class Player {
             }
             select(selected); // Recursively call select on the selected node, which was the branch with the best utility, and run through all of this again. The purpose for doing this is to eventually
             // run through a path that has the best utility. This will also give some exploration from the UCB function.
+            */
+            while(!curr.gameOver()) {
+                if (curr.isLeaf()) { // If we are trying to select a leaf node, it won't have a state. In this case, expand the current node to turn it into a node with branches of new leaf nodes.
+                    expand(curr);
+                    return;
+                }
+                double bestUtility = utility(curr.branches[0], curr); // utility() is the ubc function. Set the utility equal to the first branch, but we will run through all of them.
+                Node selected = curr.branches[0]; // Selected node is the first branch of the current node. This branch will be a node at this point, because if it was a leaf then we expanded it earlier. Since it is a node, the utility function can be applied.
+                for (int i = 1; i < curr.branches.length; i++) {
+                    double tempUtility = utility(curr.branches[i], curr); // Utility where the current branch node is the child, and the current node is the parent.
+                    if (tempUtility > bestUtility) {
+                        bestUtility = tempUtility; // Update utility to the best one
+                        selected = curr.branches[i]; // Update the selected node to the one with the best utility.
+                    }
+                }
+                curr = selected;
+            }
+            curr.played++;
+            backprop(curr.parent, 1, 1);
+            //select(selected); // Recursively call select on the selected node, which was the branch with the best utility, and run through all of this again. The purpose for doing this is to eventually
+            // run through a path that has the best utility. This will also give some exploration from the UCB function.
         }
 
 
@@ -163,10 +195,10 @@ public class Player {
     {
         /* Set up the current state */
         state.player = player;
-        PlayerHelper.memcpy(state.board,board);
+        PlayerHelperMason.memcpy(state.board,board);
 
         /* Find the legal moves for the current state */
-        PlayerHelper.FindLegalMoves(state);
+        PlayerHelperMason.FindLegalMoves(state);
     }
     static double minmaxAB(State state, int maxDepth, double alpha, double beta, boolean isMaxPlayer, float SecPerMove) {
         maxDepth--;
@@ -204,9 +236,9 @@ public class Player {
 
     static void PerformMove(State state, int moveIndex)
     {
-        PlayerHelper.PerformMove(state.board, state.movelist[moveIndex], PlayerHelper.MoveLength(state.movelist[moveIndex]));
+        PlayerHelperMason.PerformMove(state.board, state.movelist[moveIndex], PlayerHelperMason.MoveLength(state.movelist[moveIndex]));
         state.player = state.player%2+1;
-        PlayerHelper.FindLegalMoves(state);
+        PlayerHelperMason.FindLegalMoves(state);
     }
 
     /*
@@ -238,15 +270,9 @@ public class Player {
         itself. Basically, I might have a super good move down there, but in order to get there I need the opponent
         to make the dumbest move in existence, which it obviously would not.
 
-        I have modified this function to also take in the SecPerMove from PlayerHelper to track time and make sure
+        I have modified this function to also take in the SecPerMove from PlayerHelperMason to track time and make sure
         it never goes over time, even if that means picking a sub-optimal move.
 
-     */
-
-    // MCTS stuff
-    /*
-        need to keep track of how many times a move resulted in a win, and how many times it was played which gets propagated up
-        links from the children back to the parent for propagation
      */
 
     //max is going to be the length of the array or whatever gets put into there.
@@ -271,16 +297,18 @@ public class Player {
         //System.err.println("Expanded root node. It has " + root.won + " wins and " + root.played + " plays.");
         start = System.currentTimeMillis();
         end = System.currentTimeMillis();
-        while(!isOutOfTime(start, end, PlayerHelper.SecPerMove)){
+        while(!isOutOfTime(start, end, PlayerHelperMason.SecPerMove)){
             end = System.currentTimeMillis();
             Node.select(root);
             //System.err.println("Root has been played " + root.played + " times with " + root.won + " wins.");
             // I would expect this message to constantly update with more and more games played and more and more wins as the game goes on.
         }
+        /*
         System.err.println("Root was played " + root.played + " times and won " + root.won + " times.");
         for(int i = 0; i < root.branches.length; i++) {
             System.err.println("Branch " + i + " of root was played " + root.branches[i].played + " times and won " + (root.branches[i].played-root.branches[i].won) + " times.");
         }
+         */
         double bestUtility = (root.branches[0].played-root.branches[0].won)/root.branches[0].played;
         //double bestUtility = root.branches[0].played;
         int myBestMoveIndex = 0;
@@ -297,8 +325,8 @@ public class Player {
                 }
             }
         }
-        System.err.println("The best move found was " + myBestMoveIndex + " with a utility of " + bestUtility);
-        PlayerHelper.memcpy(bestMove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
+        //System.err.println("The best move found was " + myBestMoveIndex + " with a utility of " + bestUtility);
+        PlayerHelperMason.memcpy(bestMove, state.movelist[myBestMoveIndex], PlayerHelperMason.MoveLength(state.movelist[myBestMoveIndex]));
     }
 
     /* Employ your favorite search to find the best move. This code is an example */
@@ -309,7 +337,7 @@ public class Player {
      */
     /* and the PerformMove function */
 
-    // Modified the function to take the SecPerMove from PlayerHelper. This way I can run my code for SecPerMove - buffer
+    // Modified the function to take the SecPerMove from PlayerHelperMason. This way I can run my code for SecPerMove - buffer
     // and if it would still be executing, play the best move found instead of losing by default since I ran out of time.
     public static void FindBestMove(int player, char[][] board, char[] bestmove, float SecPerMove) {
         boolean killerMove = false; // Used for breaking out if we find a winning move early and don't need to search anymore.
@@ -385,7 +413,7 @@ public class Player {
             }
         }
         //System.err.println("Selecting move " + state.movelist[myBestMoveIndex] + " with a value of " + bestMoveValue + "\n");
-        PlayerHelper.memcpy(bestmove, state.movelist[myBestMoveIndex], PlayerHelper.MoveLength(state.movelist[myBestMoveIndex]));
+        PlayerHelperMason.memcpy(bestmove, state.movelist[myBestMoveIndex], PlayerHelperMason.MoveLength(state.movelist[myBestMoveIndex]));
     }
 
     static void printBoard(State state)
@@ -398,18 +426,18 @@ public class Player {
             {
                 if(x%2 != y%2)
                 {
-                    if(PlayerHelper.empty(state.board[y][x]))
+                    if(PlayerHelperMason.empty(state.board[y][x]))
                     {
                         System.err.print(" ");
                     }
-                    else if(PlayerHelper.king(state.board[y][x]))
+                    else if(PlayerHelperMason.king(state.board[y][x]))
                     {
-                        if(PlayerHelper.color(state.board[y][x])==2) System.err.print("B");
+                        if(PlayerHelperMason.color(state.board[y][x])==2) System.err.print("B");
                         else System.err.print("A");
                     }
-                    else if(PlayerHelper.piece(state.board[y][x]))
+                    else if(PlayerHelperMason.piece(state.board[y][x]))
                     {
-                        if(PlayerHelper.color(state.board[y][x])==2) System.err.print("b");
+                        if(PlayerHelperMason.color(state.board[y][x])==2) System.err.print("b");
                         else System.err.print("a");
                     }
                 }
@@ -429,199 +457,6 @@ public class Player {
         A different evalBoard function that compares number of pieces instead of material difference. Output is
         me/opponent as I still want to value higher numbers.
      */
-    static boolean isMyPiece(State state, int y, int x) {
-        if(PlayerHelper.color(state.board[y][x])==2) return true;
-        else return false;
-    }
-
-    // Determine how many friends are nearby, which add to my score as a piece will be harder to take with friends nearby
-    static int numFriends(State state, int y, int x) {
-        int friends = 0;
-        if(y>= 1 && y<=6 && x>= 1 && x<=6) {
-            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && isMyPiece(state, y+1, x+1)) friends += 1;
-            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && isMyPiece(state, y-1, x+1)) friends += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && isMyPiece(state, y+1, x-1)) friends += 1;
-            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && isMyPiece(state, y-1, x-1)) friends += 1;
-        } else if (y == 0 && x>=1 && x<=6) {
-            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && isMyPiece(state, y+1, x+1)) friends += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && isMyPiece(state, y+1, x-1)) friends += 1;
-        } else if (y == 7 && x>=1 && x<=6) {
-            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && isMyPiece(state, y-1, x+1)) friends += 1;
-            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && isMyPiece(state, y-1, x-1)) friends += 1;
-        } else if (x == 7 && y>=1 && y<=6) {
-            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && isMyPiece(state, y-1, x-1)) friends += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && isMyPiece(state, y+1, x-1)) friends += 1;
-        } else if (x == 0 && y>=1 && y<=6) {
-            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && isMyPiece(state, y-1, x+1)) friends += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && isMyPiece(state, y+1, x+1)) friends += 1;
-        }
-        return friends;
-    }
-
-    static int numEnemies(State state, int y, int x) {
-        int enemies = 0;
-        if(y>= 1 && y<=6 && x>= 1 && x<=6) {
-            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && !isMyPiece(state, y+1, x+1)) enemies += 1;
-            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && !isMyPiece(state, y-1, x+1)) enemies += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && !isMyPiece(state, y+1, x-1)) enemies += 1;
-            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && !isMyPiece(state, y-1, x-1)) enemies += 1;
-        } else if (y == 0 && x>=1 && x<=6) {
-            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && !isMyPiece(state, y+1, x+1)) enemies += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && !isMyPiece(state, y+1, x-1)) enemies += 1;
-        } else if (y == 7 && x>=1 && x<=6) {
-            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && !isMyPiece(state, y-1, x+1)) enemies += 1;
-            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && !isMyPiece(state, y-1, x-1)) enemies += 1;
-        } else if (x == 7 && y>=1 && y<=6) {
-            if ((PlayerHelper.piece(state.board[y-1][x-1]) || PlayerHelper.king(state.board[y-1][x-1])) && !isMyPiece(state, y-1, x-1)) enemies += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x-1]) || PlayerHelper.king(state.board[y+1][x-1])) && !isMyPiece(state, y+1, x-1)) enemies += 1;
-        } else if (x == 0 && y>=1 && y<=6) {
-            if ((PlayerHelper.piece(state.board[y-1][x+1]) || PlayerHelper.king(state.board[y-1][x+1])) && !isMyPiece(state, y-1, x+1)) enemies += 1;
-            if ((PlayerHelper.piece(state.board[y+1][x+1]) || PlayerHelper.king(state.board[y+1][x+1])) && !isMyPiece(state, y+1, x+1)) enemies += 1;
-        }
-        return enemies;
-    }
-
-
-    static boolean canSafelyMoveForward(State state, int y, int x) {
-        boolean canSafelyMoveForward = false;
-        if(y>=0 && y<=5 && x>=2 && x<=5) {
-            if(PlayerHelper.empty(state.board[y+2][x])) {
-                if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x+2) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
-            }
-            else if(!isMyPiece(state, y+2, x)) {
-                if((isMyPiece(state, y, x+2) && (isMyPiece(state, y+2, x+2) || PlayerHelper.empty(state.board[y+2][x+2])))) canSafelyMoveForward = true;
-                if((isMyPiece(state, y, x-2) && (isMyPiece(state, y+2, x-2) || PlayerHelper.empty(state.board[y+2][x-2])))) canSafelyMoveForward = true;
-                else canSafelyMoveForward = false;
-            }
-        } else if(y>=0 && y<=5 && x<=1) {
-            if(PlayerHelper.empty(state.board[y+2][x])) {
-                if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
-            }
-            if(!isMyPiece(state, y+2, x)) {
-                if(isMyPiece(state, y, x+2) && (PlayerHelper.empty(state.board[y+2][x+2])) || (isMyPiece(state, y+2, x+2))) canSafelyMoveForward = true;
-                else canSafelyMoveForward = false;
-            }
-            if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
-        } else if(y>=0 && y<=5 && x>=6) {
-            if(PlayerHelper.empty(state.board[y+2][x])) {
-                if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
-            }
-            if(!isMyPiece(state, y+2, x)) {
-                if(isMyPiece(state, y, x-2) && (PlayerHelper.empty(state.board[y+2][x-2])) || (isMyPiece(state, y+2, x-2))) canSafelyMoveForward = true;
-                else canSafelyMoveForward = false;
-            }
-            if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
-        }
-        return canSafelyMoveForward;
-    }
-
-    static boolean canSafelyMoveBackward(State state, int y, int x) {
-        boolean canSafelyMoveForward = false;
-        y = 7-y;
-        x = 7-x;
-        if(y>=0 && y<=5 && x>=2 && x<=5) {
-            if(PlayerHelper.empty(state.board[y+2][x])) {
-                if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x+2) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
-            }
-            else if(!isMyPiece(state, y+2, x)) {
-                if((isMyPiece(state, y, x+2) && (isMyPiece(state, y+2, x+2) || PlayerHelper.empty(state.board[y+2][x+2])))) canSafelyMoveForward = true;
-                if((isMyPiece(state, y, x-2) && (isMyPiece(state, y+2, x-2) || PlayerHelper.empty(state.board[y+2][x-2])))) canSafelyMoveForward = true;
-                else canSafelyMoveForward = false;
-            }
-        } else if(y>=0 && y<=5 && x<=1) {
-            if(PlayerHelper.empty(state.board[y+2][x])) {
-                if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
-            }
-            if(!isMyPiece(state, y+2, x)) {
-                if(isMyPiece(state, y, x+2) && (PlayerHelper.empty(state.board[y+2][x+2])) || (isMyPiece(state, y+2, x+2))) canSafelyMoveForward = true;
-                else canSafelyMoveForward = false;
-            }
-            if(PlayerHelper.empty(state.board[y+2][x+2]) || isMyPiece(state, y+2, x+2)) canSafelyMoveForward = true;
-        } else if(y>=0 && y<=5 && x>=6) {
-            if(PlayerHelper.empty(state.board[y+2][x])) {
-                if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
-            }
-            if(!isMyPiece(state, y+2, x)) {
-                if(isMyPiece(state, y, x-2) && (PlayerHelper.empty(state.board[y+2][x-2])) || (isMyPiece(state, y+2, x-2))) canSafelyMoveForward = true;
-                else canSafelyMoveForward = false;
-            }
-            if(PlayerHelper.empty(state.board[y+2][x-2]) || isMyPiece(state, y+2, x-2)) canSafelyMoveForward = true;
-        }
-        return canSafelyMoveForward;
-    }
-
-    /*
-static boolean canSafelyMoveForward(State state, int y, int x) {
-    boolean canSafelyMoveForward = false;
-    if(y>=0 && y<=5 && x>=2 && x<=5) {
-        if(PlayerHelper.empty(state.board[y+2][x+2]) || PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
-    } else if(y>=0 && y<=5 && x<=1) {
-        if(PlayerHelper.empty(state.board[y+2][x+2])) canSafelyMoveForward = true;
-    } else if(y>=0 && y<= 5 && x>= 6) {
-        if(PlayerHelper.empty(state.board[y+2][x-2])) canSafelyMoveForward = true;
-    }
-    return canSafelyMoveForward;
-}
-*/
-
-    static double evalBoardSpecial(State state)
-    {
-        int y,x;
-        double scoreMe = 0.0;
-        double scoreOpponent = 0.0;
-        double score = 0.0;
-
-        for(y=0; y<8; y++) for(x=0; x<8; x++)
-        {
-            if(x%2 != y%2)
-            {
-                if(PlayerHelper.empty(state.board[y][x]))
-                {
-                }
-                else if(PlayerHelper.king(state.board[y][x]))
-                {
-                    if(isMyPiece(state, y, x)) {
-                        scoreMe += 2.1;
-                        if(x>=2 && x<= 5 && y>=1 && y<=6) scoreMe += 0.2;
-                        /*
-                        if(canSafelyMoveBackward(state, y, x) && y==7) {
-                            scoreMe += 0.4;
-                        }
-                         */
-                    }
-                    else scoreOpponent += 2.1;
-                    if(x>=2 && x<= 5 && y>=1 && y<=6) scoreOpponent += 0.2;
-                    /*
-                    if(canSafelyMoveBackward(state, y, x) && y==7) {
-                        scoreOpponent += 0.4;
-                    }
-
-                     */
-                }
-                else if(PlayerHelper.piece(state.board[y][x]))
-                {
-                    if(isMyPiece(state, y, x)) {
-                        scoreMe += 1.0; // Automatically gain points for being my piece
-                        //if(numFriends(state, y, x) >= 1) scoreMe += numFriends(state, y, x)*0.1; // Slightly extra points for having friends nearby
-                        //if(canSafelyMoveForward(state, y, x)) scoreMe += 0.3; // Greatly value safely moving forward.
-                        if(x>=2 && x<= 5) scoreMe += 0.2;
-                        if(y==0) scoreMe += 0.8;
-                    }
-                    else scoreOpponent += 1.0; // Automatically gain points for being my piece
-                    if(x>=2 && x<= 5) scoreOpponent += 0.2;
-                    //if (numFriends(state, y, x) >= 2) scoreOpponent += numFriends(state, y, x)*0.1; // Extra points for having friends nearby
-                    //if(canSafelyMoveForward(state, y, x)) scoreOpponent += 0.3;
-                    if(y==0) scoreOpponent += 0.8;
-                }
-            }
-        }
-
-        score = scoreMe/scoreOpponent;
-        if(state.player==1) score = 1/score;
-
-        return score;
-
-    }
 
     static double evalBoard(State state)
     {
@@ -634,17 +469,17 @@ static boolean canSafelyMoveForward(State state, int y, int x) {
         {
             if(x%2 != y%2)
             {
-                if(PlayerHelper.empty(state.board[y][x]))
+                if(PlayerHelperMason.empty(state.board[y][x]))
                 {
                 }
-                else if(PlayerHelper.king(state.board[y][x]))
+                else if(PlayerHelperMason.king(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 2.1;
+                    if(PlayerHelperMason.color(state.board[y][x])==2) scoreMe += 2.1;
                     else scoreOpponent += 2.1;
                 }
-                else if(PlayerHelper.piece(state.board[y][x]))
+                else if(PlayerHelperMason.piece(state.board[y][x]))
                 {
-                    if(PlayerHelper.color(state.board[y][x])==2) scoreMe += 1.0;
+                    if(PlayerHelperMason.color(state.board[y][x])==2) scoreMe += 1.0;
                     else scoreOpponent += 1.0;
                 }
             }
