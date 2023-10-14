@@ -89,26 +89,19 @@ public class PlayerMason {
             //backprop(curr); // Backpropagate the won/played values to the current nodes parent.
         }
         public static void backprop(Node curr, double won, int played) {
-            /*
+
             if(curr == null) return; // If there is no parent then this is the root node in which case return.
             curr.won += won;
             curr.played += played;
             backprop(curr.parent, played-won, played); // Recursive call to update the parent. Same formula as seen in the other backprop function where the parent wins is the child losses, or (played-wins).
 
-             */
-            // Do this without recursion to try and make things faster.
-            while(curr.parent != null) {
-                curr.won += won;
-                curr.played += played;
-                curr = curr.parent;
-                won = curr.played-curr.won;
-                played = curr.played;
-            }
+
         }
         public static void backprop(Node curr) {
             // Backpropagate the values of won/played of the current node to the parent node. The played value gets propagated regardless, but since the parent node will actually be the opposite player
             // the wins for the parent is actually the losses for the current. In other words, parent wins = child.plays - child.wins
             backprop(curr.parent, curr.played-curr.won, curr.played); // Shoot the wins/played values back up to the parent.
+            //backprop(curr, curr.won, curr.played);
         }
 
         public static int playout(State myState, int maxMoves, int maxDepth) {
@@ -144,7 +137,7 @@ public class PlayerMason {
         }
 
         public static void select(Node curr) {
-            /*
+
             if(curr.gameOver()) { // if the game is over, meaning there are NO branches (no legal moves) then the game is over for the current node. Update the played value and propagate it up the tree.
                 curr.played++;
                 backprop(curr.parent, 1, 1);
@@ -164,28 +157,14 @@ public class PlayerMason {
                 }
             }
             select(selected); // Recursively call select on the selected node, which was the branch with the best utility, and run through all of this again. The purpose for doing this is to eventually
+
             // run through a path that has the best utility. This will also give some exploration from the UCB function.
-            */
-            while(!curr.gameOver()) {
-                if (curr.isLeaf()) { // If we are trying to select a leaf node, it won't have a state. In this case, expand the current node to turn it into a node with branches of new leaf nodes.
-                    expand(curr);
-                    return;
-                }
-                double bestUtility = utility(curr.branches[0], curr); // utility() is the ubc function. Set the utility equal to the first branch, but we will run through all of them.
-                Node selected = curr.branches[0]; // Selected node is the first branch of the current node. This branch will be a node at this point, because if it was a leaf then we expanded it earlier. Since it is a node, the utility function can be applied.
-                for (int i = 1; i < curr.branches.length; i++) {
-                    double tempUtility = utility(curr.branches[i], curr); // Utility where the current branch node is the child, and the current node is the parent.
-                    if (tempUtility > bestUtility) {
-                        bestUtility = tempUtility; // Update utility to the best one
-                        selected = curr.branches[i]; // Update the selected node to the one with the best utility.
-                    }
-                }
-                curr = selected;
-            }
-            curr.played++;
-            backprop(curr.parent, 1, 1);
+
+
             //select(selected); // Recursively call select on the selected node, which was the branch with the best utility, and run through all of this again. The purpose for doing this is to eventually
             // run through a path that has the best utility. This will also give some exploration from the UCB function.
+
+
         }
 
 
