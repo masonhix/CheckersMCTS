@@ -7,7 +7,7 @@ public class PlayerMason {
     static int buffer = 50; // Through MANY trial and error tests 50ms seems to work well for an extra buffer for time constraints.
     static Random random=new Random();
     static class Node {
-        State state;
+        mhState state;
         Node[] branches;
         Node parent;
         double won = 0; // num times a node won
@@ -26,7 +26,7 @@ public class PlayerMason {
             // with a depth of 2 or 3 so it's fast on a random move from the movelist to evaluate.
             return (branches[0] == null);
         }
-        public Node(State state, Node parent) {
+        public Node(mhState state, Node parent) {
             // Generate a new node which contains a state of the board, a parent node, and branches. If this is a leaf node
             // the branches will be null. Also contained in EVERY node is a counter of wins and number of times played.
             this.state = state;
@@ -72,7 +72,7 @@ public class PlayerMason {
             // The leaf nodes do not turn into more nodes until they are expanded. They are not expanded until we decide we need to go deeper.
             for(int i = 0; i<curr.state.numLegalMoves; i++) {
                 // A new LEAF NODE for each legal move present in the current node, and the parent of each of these nodes is the current node.
-                State nextState = new State(curr.state);
+                mhState nextState = new mhState(curr.state);
                 PerformMove(nextState, i);
                 curr.branches[i] = new Node(nextState, curr); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
                 //curr.played++;
@@ -104,11 +104,11 @@ public class PlayerMason {
             //backprop(curr, curr.won, curr.played);
         }
 
-        public static int playout(State myState, int maxMoves, int maxDepth) {
+        public static int playout(mhState myState, int maxMoves, int maxDepth) {
             // Playout method without using recursion. It is impossible to try to compare the value this returns to the recurisve playout method because it shuffles the movelist. Even comparing the recursive function results to itself shows differences.
             // It should still play just as well as before though.
             boolean isMe = false;   // dummy boolean to track whether the state being evaluated is me or the opponent. This is initialized to false since the move is performed before the playout in expand, so I know it is a child nodes (opponents) turn.
-            State state = new State(myState); // make a copy of the state so I don't mess up the original.
+            mhState state = new mhState(myState); // make a copy of the state so I don't mess up the original.
             // Just about the only thing I need to do this without recursion is a while loop and a way to track who's turn it is to see if i am returning a positive or a negative 1.
             while(maxMoves > 0) {
                 int myBestMoveIndex = 0;
@@ -119,7 +119,7 @@ public class PlayerMason {
                 }
                 shuffle(state.movelist, state.numLegalMoves);
                 for (int x = 0; x < state.numLegalMoves; x++) {
-                    State nextState = new State(state);
+                    mhState nextState = new mhState(state);
                     PerformMove(nextState, x);
                     // the false indicates whether this player is the max player. Since perform move is done twice (one here and one later), this is always false.
                     double temp = minmaxAB(nextState, maxDepth, -Double.MAX_VALUE, Double.MAX_VALUE, false, PlayerHelperMason.SecPerMove);
@@ -170,7 +170,7 @@ public class PlayerMason {
 
     }
 
-    static void setupBoardState(State state, int player, char[][] board)
+    static void setupBoardState(mhState state, int player, char[][] board)
     {
         /* Set up the current state */
         state.player = player;
@@ -179,7 +179,7 @@ public class PlayerMason {
         /* Find the legal moves for the current state */
         PlayerHelperMason.FindLegalMoves(state);
     }
-    static double minmaxAB(State state, int maxDepth, double alpha, double beta, boolean isMaxPlayer, float SecPerMove) {
+    static double minmaxAB(mhState state, int maxDepth, double alpha, double beta, boolean isMaxPlayer, float SecPerMove) {
         maxDepth--;
         if (isMaxPlayer) { // max loop
             if(maxDepth <= 0) return evalBoard(state);
@@ -188,7 +188,7 @@ public class PlayerMason {
             if (outOfTime) maxDepth = 0;
             double moveVal = -(Double.MAX_VALUE);
             for (int i = 0; i < state.numLegalMoves; i++) {
-                State nextState = new State(state);
+                mhState nextState = new mhState(state);
                 PerformMove(nextState, i);
                 moveVal = Math.max(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, false, SecPerMove)); // The next player will NOT be max player
                 alpha = Math.max(alpha, moveVal);
@@ -202,7 +202,7 @@ public class PlayerMason {
             if (outOfTime) maxDepth = 0;
             double moveVal = Double.MAX_VALUE;
             for (int i = 0; i < state.numLegalMoves; i++) {
-                State nextState = new State(state);
+                mhState nextState = new mhState(state);
                 PerformMove(nextState, i);
                 moveVal = Math.min(moveVal, minmaxAB(nextState, maxDepth, alpha, beta, true, SecPerMove)); // The next player WILL be max player
                 beta = Math.min(beta, moveVal);
@@ -213,7 +213,7 @@ public class PlayerMason {
     }
 
 
-    static void PerformMove(State state, int moveIndex)
+    static void PerformMove(mhState state, int moveIndex)
     {
         PlayerHelperMason.PerformMove(state.board, state.movelist[moveIndex], PlayerHelperMason.MoveLength(state.movelist[moveIndex]));
         state.player = state.player%2+1;
@@ -266,7 +266,7 @@ public class PlayerMason {
     }
 
     public static void FindBestMoveMCTS(int player, char[][] board, char[] bestMove) {
-        State state = new State();
+        mhState state = new mhState();
         setupBoardState(state, player, board);
         shuffle(state.movelist, state.numLegalMoves);
         printBoard(state);
@@ -324,7 +324,7 @@ public class PlayerMason {
         start = System.currentTimeMillis(); // Start tracking the time in milliseconds
         end = System.currentTimeMillis();
         int myBestMoveIndex;
-        State state = new State(); // , nextstate;
+        mhState state = new mhState(); // , nextstate;
         setupBoardState(state, player, board);
         myBestMoveIndex = 0;
         int maxDepth = 100;
@@ -340,7 +340,7 @@ public class PlayerMason {
             // alpha beta pruning loop
             for (int x = 0; x < state.numLegalMoves; x++) {
                 if (outOfTime) break; // Jump out if i run out of time
-                State nextState = new State(state);
+                mhState nextState = new mhState(state);
                 PerformMove(nextState, x);
                 //This will eventually hit a terminal node a return a value for this state.
                 double temp = minmaxAB(nextState, i, -(Double.MAX_VALUE), Double.MAX_VALUE, false, SecPerMove);
@@ -395,7 +395,7 @@ public class PlayerMason {
         PlayerHelperMason.memcpy(bestmove, state.movelist[myBestMoveIndex], PlayerHelperMason.MoveLength(state.movelist[myBestMoveIndex]));
     }
 
-    static void printBoard(State state)
+    static void printBoard(mhState state)
     {
         int y,x;
 
@@ -437,7 +437,7 @@ public class PlayerMason {
         me/opponent as I still want to value higher numbers.
      */
 
-    static double evalBoard(State state)
+    static double evalBoard(mhState state)
     {
         int y,x;
         double score, scoreMe, scoreOpponent;

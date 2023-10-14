@@ -1,7 +1,7 @@
 import java.util.*;
 import java.io.*;
 
-public class PlayerHelperMason {
+public class PlayerHelper {
     public static final int MaxMoveLength=12;
     public static final int Clear = 0x1f;
     public static final int Empty = 0x00;
@@ -258,7 +258,7 @@ public class PlayerHelperMason {
     }
 
     /* Determines all of the legal moves possible for a given state */
-    static int FindLegalMoves(mhState state) {
+    static int FindLegalMoves(State state) {
         int x, y;
         char move[] = new char[MaxMoveLength], board[][] = new char[8][8];
 
@@ -534,9 +534,8 @@ public class PlayerHelperMason {
         if (player1 == 1) {
             /* Find my move, update board, and write move to pipe */
 
-            //Player.FindBestMove(1,board,bestmove, SecPerMove);
-            PlayerMason.FindBestMoveMCTS(1,board,bestmove);
-
+            Player.FindBestMove(1,board,bestmove, SecPerMove);
+  
             if (bestmove[0] != 0) { /* There is a legal move */
                 mlen = MoveLength(bestmove);
                 PerformMove(board, bestmove, mlen);
@@ -559,8 +558,7 @@ public class PlayerHelperMason {
             /* Update the board to reflect opponents move */
             mlen = TextToMove(buf, move);
             PerformMove(board, move, mlen);
-            //Player.FindBestMove(2,board,bestmove, SecPerMove);
-            PlayerMason.FindBestMoveMCTS(2,board,bestmove);
+            Player.FindBestMove(2,board,bestmove, SecPerMove);
             if (bestmove[0] != 0) { /* There is a legal move */
                 mlen = MoveLength(bestmove);
                 PerformMove(board, bestmove, mlen);
@@ -592,11 +590,9 @@ public class PlayerHelperMason {
 
             /* Find my move, update board, and write move to pipe */
             if (player1 != 0)
-                //Player.FindBestMove(1,board,bestmove, SecPerMove);
-                PlayerMason.FindBestMoveMCTS(1,board,bestmove);
+                Player.FindBestMove(1,board,bestmove, SecPerMove);
             else
-                //Player.FindBestMove(2,board,bestmove, SecPerMove);
-                PlayerMason.FindBestMoveMCTS(2,board,bestmove);
+                Player.FindBestMove(2,board,bestmove, SecPerMove);
             if (bestmove[0] != 0) { /* There is a legal move */
                 mlen = MoveLength(bestmove);
                 PerformMove(board, bestmove, mlen);
