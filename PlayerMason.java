@@ -76,9 +76,9 @@ public class PlayerMason {
                 PerformMove(nextState, i);
                 curr.branches[i] = new Node(nextState, curr); // Set the branch at location i from null to the new node we just made. Update isMaxPlayer to the inverse of the current value.
                 //curr.played++;
-                int score = 0; //playout(nextState, 30, 3);
-                if (nextState.numLegalMoves >= 4) score = playout(nextState, 30, 4);
-                else score = playout(nextState, 30, 2);
+                int score = playout(nextState, 30, 3);
+                //if (nextState.numLegalMoves >= 4) score = playout(nextState, 30, 4);
+                //else score = playout(nextState, 30, 2);
                 if (score > 0) curr.branches[i].won += 1;
                 else if (score == 0) curr.branches[i].won += 0.5;
                 //curr.won += playout(nextState, 5, 80, !curr.isMaxPlayer)>0?1:0; //playout using AB pruning. If playout is >0 add 1 to the curr.won score, anything else add 0 (draws are basically losses).
